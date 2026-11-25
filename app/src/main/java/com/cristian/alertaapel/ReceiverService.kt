@@ -21,6 +21,17 @@ class ReceiverService : Service() {
         private const val TAG = "AlertaApel/Receiver"
         @Volatile var running = false
         @Volatile var lastStatus: String = "—"
+        private val log = ArrayDeque<String>()
+
+        fun addLog(line: String) {
+            val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+            synchronized(log) {
+                log.addFirst("$t $line")
+                while (log.size > 12) log.removeLast()
+            }
+        }
+
+        fun logText(): String = synchronized(log) { log.joinToString("\n") }
     }
 
     @Volatile private var stop = false
@@ -89,6 +100,7 @@ class ReceiverService : Service() {
             process(line)
         } catch (e: Exception) {
             Log.w(TAG, "eroare client", e)
+            addLog("EROARE: ${e.javaClass.simpleName}: ${e.message}")
         } finally {
             // lăsăm emițătorul să citească "OK" înainte de închidere
             try { Thread.sleep(300) } catch (_: InterruptedException) {}
@@ -104,12 +116,22 @@ class ReceiverService : Service() {
         val text = parts.getOrNull(3)?.ifBlank { null }
         lastStatus = "Primit: $type ${Notifs.label(number, name)}"
         Log.i(TAG, lastStatus)
+        addLog("primit $type | ${number ?: ""} | ${name ?: ""} | ${(text ?: "").take(30)}")
+        val nm = getSystemService(android.app.NotificationManager::class.java)!!
+        if (!nm.areNotificationsEnabled()) addLog("  ⚠ notificările aplicației sunt OPRITE")
+        val chId = when (type) { Msg.MESSAGE -> Notifs.CH_MSG; Msg.MISSED -> Notifs.CH_MISSED; else -> Notifs.CH_CALL }
+        val ch = nm.getNotificationChannel(chId)
+        if (ch == null) addLog("  ⚠ canalul $chId nu există – îl creez")
+        else if (ch.importance == android.app.NotificationManager.IMPORTANCE_NONE) addLog("  ⚠ categoria „${ch.name}” e OPRITĂ în setări")
+        Notifs.createChannels(this)
         when (type) {
             Msg.CALL -> Notifs.showIncoming(this, number, name)
             Msg.TEST -> Notifs.showIncoming(this, null, null, test = true)
             Msg.ANSWERED, Msg.ENDED -> Notifs.cancelIncoming(this)
             Msg.MISSED -> Notifs.showMissed(this, number, name)
             Msg.MESSAGE -> Notifs.showMessage(this, number, name, text)
+            else -> addLog("  ⚠ tip necunoscut: $type")
         }
+        addLog("  → notificare afișată")
     }
 }

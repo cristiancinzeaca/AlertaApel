@@ -31,6 +31,7 @@ class MainActivity : Activity() {
     private lateinit var btnTarget: Button
     private lateinit var btnToggle: Button
     private lateinit var btnTest: Button
+    private lateinit var btnTestMsg: Button
     private lateinit var btnBattery: Button
     private lateinit var btnWhatsApp: Button
     private lateinit var tvStatus: TextView
@@ -72,7 +73,7 @@ class MainActivity : Activity() {
             text = s; isAllCaps = false; setOnClickListener { onClick() }
         }
 
-        root.addView(text("Alertă Apel", 24f, true))
+        root.addView(text("Alertă Apel  v" + (try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }), 24f, true))
         root.addView(text("Telefonul care primește apelurile trimite prin Bluetooth o alertă către celălalt telefon. Împerechează întâi telefoanele din Setări → Bluetooth."))
 
         root.addView(text("1. Ce face acest telefon?", 17f, true))
@@ -104,6 +105,11 @@ class MainActivity : Activity() {
         root.addView(btnToggle)
         btnTest = button("Trimite o alertă de test") { sendTest() }
         root.addView(btnTest)
+        btnTestMsg = button("Trimite un mesaj de test") {
+            BtSender.send(this, Msg.MESSAGE, "Test", "Alertă Apel", "Acesta este un mesaj de test")
+            Toast.makeText(this, "Trimit mesajul de test…", Toast.LENGTH_SHORT).show()
+        }
+        root.addView(btnTestMsg)
 
         tvStatus = text("", 13f).apply { setPadding(0, dp(16), 0, 0) }
         root.addView(tvStatus)
@@ -132,6 +138,8 @@ class MainActivity : Activity() {
         btnToggle.isEnabled = mode != null
         btnToggle.text = if (running) "Oprește" else "Pornește"
         btnTest.isEnabled = running
+        btnTestMsg.visibility = btnTest.visibility
+        btnTestMsg.isEnabled = running
         btnBattery.visibility = if (isIgnoringBattery()) View.GONE else View.VISIBLE
 
         tvStatus.text = when (mode) {
@@ -139,7 +147,8 @@ class MainActivity : Activity() {
             Prefs.MODE_SENDER -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${SenderService.lastStatus}" +
                 "\n\nAscultare notificări (WhatsApp): ${if (CallNotificationListener.connected) "CONECTATĂ" else "NECONECTATĂ"}" +
                 "\nJurnal WhatsApp/apeluri internet:\n${CallNotificationListener.logText().ifBlank { "(nimic încă)" }}"
-            else -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${ReceiverService.lastStatus}"
+            else -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${ReceiverService.lastStatus}" +
+                "\n\nJurnal recepție:\n${ReceiverService.logText().ifBlank { "(nimic încă)" }}"
         }
     }
 
