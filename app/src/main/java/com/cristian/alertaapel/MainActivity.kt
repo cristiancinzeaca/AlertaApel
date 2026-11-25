@@ -136,7 +136,9 @@ class MainActivity : Activity() {
 
         tvStatus.text = when (mode) {
             null -> "Alege mai întâi rolul telefonului."
-            Prefs.MODE_SENDER -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${SenderService.lastStatus}"
+            Prefs.MODE_SENDER -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${SenderService.lastStatus}" +
+                "\n\nAscultare notificări (WhatsApp): ${if (CallNotificationListener.connected) "CONECTATĂ" else "NECONECTATĂ"}" +
+                "\nJurnal WhatsApp/apeluri internet:\n${CallNotificationListener.logText().ifBlank { "(nimic încă)" }}"
             else -> "Stare: ${if (running) "PORNIT" else "oprit"}\nUltima acțiune: ${ReceiverService.lastStatus}"
         }
     }
