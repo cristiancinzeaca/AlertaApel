@@ -2,6 +2,8 @@ name: Build APK
 on:
   push:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,7 +17,14 @@ jobs:
         with:
           gradle-version: "8.10.2"
       - run: gradle assembleDebug
+      - run: cp app/build/outputs/apk/debug/app-debug.apk AlertaApel.apk
       - uses: actions/upload-artifact@v4
         with:
           name: AlertaApel-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: AlertaApel.apk
+      - name: Publish release "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest AlertaApel.apk --title "Alertă Apel (ultima versiune)" --notes "Build automat din commit ${GITHUB_SHA::7}"
