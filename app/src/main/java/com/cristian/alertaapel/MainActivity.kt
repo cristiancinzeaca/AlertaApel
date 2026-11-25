@@ -32,6 +32,7 @@ class MainActivity : Activity() {
     private lateinit var btnToggle: Button
     private lateinit var btnTest: Button
     private lateinit var btnBattery: Button
+    private lateinit var btnWhatsApp: Button
     private lateinit var tvStatus: TextView
 
     private val ui = Handler(Looper.getMainLooper())
@@ -93,6 +94,8 @@ class MainActivity : Activity() {
         root.addView(text("2. Configurare", 17f, true))
         btnTarget = button("Alege telefonul care te anunță") { chooseTarget() }
         root.addView(btnTarget)
+        btnWhatsApp = button("Activează alertele pentru WhatsApp") { openNotificationAccess() }
+        root.addView(btnWhatsApp)
         btnBattery = button("Scoate aplicația din optimizarea bateriei") { requestBatteryExemption() }
         root.addView(btnBattery)
 
@@ -119,6 +122,11 @@ class MainActivity : Activity() {
 
         btnTarget.visibility = if (isSender) View.VISIBLE else View.GONE
         btnTest.visibility = if (isSender) View.VISIBLE else View.GONE
+        btnWhatsApp.visibility = if (isSender) View.VISIBLE else View.GONE
+        btnWhatsApp.text = if (hasNotificationAccess())
+            "Apeluri WhatsApp / Telegram etc.: ACTIVE ✔"
+        else
+            "Activează alertele pentru WhatsApp"
         btnTarget.text = "Alege telefonul care te anunță" +
             (Prefs.targetName(this)?.let { "\nAles: $it" } ?: "")
         btnToggle.isEnabled = mode != null
@@ -228,6 +236,28 @@ class MainActivity : Activity() {
     private fun sendTest() {
         startService(Intent(this, SenderService::class.java).setAction(SenderService.ACTION_TEST))
         Toast.makeText(this, "Trimit testul…", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun hasNotificationAccess(): Boolean {
+        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
+        return flat.contains(packageName)
+    }
+
+    private fun openNotificationAccess() {
+        AlertDialog.Builder(this)
+            .setTitle("Apeluri WhatsApp")
+            .setMessage("Pe pagina următoare activează „Alertă Apel”.\n\nDacă opțiunea e gri sau apare „Setare restricționată”: Setări → Aplicații → Alertă Apel → ⋮ (sus dreapta) → „Permiteți setări restricționate”, apoi revino aici.")
+            .setPositiveButton("Continuă") { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                } catch (_: Exception) {
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+                }
+            }
+            .setNeutralButton("Info aplicație") { _, _ ->
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+            }
+            .show()
     }
 
     private fun isIgnoringBattery(): Boolean =

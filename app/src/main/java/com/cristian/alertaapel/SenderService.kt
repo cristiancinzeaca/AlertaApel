@@ -1,9 +1,6 @@
 package com.cristian.alertaapel
 
-import android.annotation.SuppressLint
 import android.app.Service
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothSocket
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -17,7 +14,6 @@ import android.os.Looper
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
 import android.util.Log
-import java.util.concurrent.Executors
 
 /**
  * Rulează pe telefonul care PRIMEȘTE apelurile.
@@ -33,7 +29,6 @@ class SenderService : Service() {
     }
 
     private val main = Handler(Looper.getMainLooper())
-    private val io = Executors.newSingleThreadExecutor()
 
     // stare apel
     private var lastState = TelephonyManager.EXTRA_STATE_IDLE
@@ -80,7 +75,6 @@ class SenderService : Service() {
         running = false
         try { unregisterReceiver(phoneReceiver) } catch (_: Exception) {}
         main.removeCallbacksAndMessages(null)
-        io.shutdown()
         super.onDestroy()
     }
 
@@ -149,55 +143,6 @@ class SenderService : Service() {
         }
     }
 
-    private fun send(type: String, number: String?, name: String?) {
-        val line = Msg.encode(type, number, name)
-        io.execute { sendWithRetry(line, type) }
-    }
-
-    private fun sendWithRetry(line: String, type: String) {
-        val addr = Prefs.targetAddress(this)
-        if (addr == null) {
-            lastStatus = "Nu ai ales telefonul receptor"
-            return
-        }
-        for (attempt in 1..3) {
-            try {
-                sendOnce(addr, line)
-                lastStatus = "OK: $type trimis (${java.text.DateFormat.getTimeInstance().format(java.util.Date())})"
-                Log.i(TAG, lastStatus)
-                return
-            } catch (e: Exception) {
-                lastStatus = "Eroare la trimitere ($type): ${e.message}"
-                Log.w(TAG, "încercarea $attempt a eșuat", e)
-                try { Thread.sleep(1200L * attempt) } catch (_: InterruptedException) { return }
-            }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun sendOnce(addr: String, line: String) {
-        val adapter = getSystemService(BluetoothManager::class.java)!!.adapter
-            ?: throw IllegalStateException("Bluetooth indisponibil")
-        if (!adapter.isEnabled) throw IllegalStateException("Bluetooth oprit")
-        val device = adapter.getRemoteDevice(addr)
-        // cancelDiscovery() ar cere BLUETOOTH_SCAN pe Android 12+; nu e necesar
-        try { if (adapter.isDiscovering) adapter.cancelDiscovery() } catch (_: SecurityException) {}
-        val socket: BluetoothSocket = device.createRfcommSocketToServiceRecord(SERVICE_UUID)
-        // dacă ceva se blochează, închidem forțat socket-ul după 8 secunde
-        val watchdog = Runnable { try { socket.close() } catch (_: Exception) {} }
-        main.postDelayed(watchdog, 8000)
-        try {
-            socket.connect()
-            val out = socket.outputStream
-            out.write(line.toByteArray(Charsets.UTF_8))
-            out.flush()
-            // așteptăm confirmarea "OK" de la receptor
-            val buf = ByteArray(8)
-            val n = socket.inputStream.read(buf)
-            if (n <= 0) throw IllegalStateException("fără confirmare de la receptor")
-        } finally {
-            main.removeCallbacks(watchdog)
-            try { socket.close() } catch (_: Exception) {}
-        }
-    }
+    private fun send(type: String, number: String?, name: String?) =
+        BtSender.send(this, type, number, name)
 }
