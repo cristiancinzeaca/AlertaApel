@@ -15,9 +15,9 @@ object BtSender {
     private val io = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
 
-    fun send(c: Context, type: String, number: String?, name: String?) {
+    fun send(c: Context, type: String, number: String?, name: String?, text: String? = null) {
         val ctx = c.applicationContext
-        val line = Msg.encode(type, number, name)
+        val line = Msg.encode(type, number, name, text)
         io.execute { sendWithRetry(ctx, line, type) }
     }
 

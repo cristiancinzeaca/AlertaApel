@@ -29,7 +29,9 @@ class CallNotificationListener : NotificationListenerService() {
             "com.instagram.android" to "Instagram",
             "com.skype.raider" to "Skype",
             "com.microsoft.teams" to "Teams",
-            "com.google.android.apps.tachyon" to "Google Meet"
+            "com.google.android.apps.tachyon" to "Google Meet",
+            "com.samsung.android.messaging" to "SMS",
+            "com.google.android.apps.messaging" to "SMS"
         )
         private val MISSED_WORDS = listOf("missed", "perdida", "pierdut", "nepreluat", "verpasst", "manqué", "persa")
         @Volatile var connected = false
@@ -102,7 +104,10 @@ class CallNotificationListener : NotificationListenerService() {
         val looksIncoming = INCOMING_WORDS.any { text.contains(it) }
         val isCall = n.category == Notification.CATEGORY_CALL ||
             (known && (hasFullScreen || looksIncoming) && CALL_WORDS.any { text.contains(it) })
-        if (!isCall) return
+        if (!isCall) {
+            forwardMessage(sbn, n, app, title, rawText)
+            return
+        }
 
         // apel în curs (ai răspuns) -> ștergem alerta de pe receptor
         val ongoing = ONGOING_WORDS.any { text.contains(it) } ||
@@ -125,6 +130,27 @@ class CallNotificationListener : NotificationListenerService() {
         if (!active()) return
         addLog("  → notificarea de apel a dispărut, închid alerta")
         BtSender.send(this, Msg.ENDED, r.first, r.second)
+    }
+
+    /** ultimul text trimis pentru fiecare conversație – WhatsApp republică des aceeași notificare */
+    private val lastMsg = HashMap<String, String>()
+
+    private fun forwardMessage(sbn: StatusBarNotification, n: Notification, app: String, title: String?, rawText: String) {
+        if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return   // rezumatul „5 mesaje noi”
+        if ((n.flags and Notification.FLAG_ONGOING_EVENT) != 0) return  // backup, „se caută mesaje noi” etc.
+        if (n.category != null && n.category != Notification.CATEGORY_MESSAGE &&
+            n.category != Notification.CATEGORY_SOCIAL && n.category != Notification.CATEGORY_EMAIL) return
+        if (title.isNullOrBlank() || rawText.isBlank()) return
+        // ultimul mesaj din conversație, dacă aplicația folosește MessagingStyle
+        val msgs = n.extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+        val last = (msgs?.lastOrNull() as? android.os.Bundle)?.getCharSequence("text")?.toString()
+        val body = (last ?: rawText).trim()
+        val dedupe = "$title|$body"
+        if (lastMsg[sbn.key] == dedupe) return
+        lastMsg[sbn.key] = dedupe
+        if (lastMsg.size > 200) lastMsg.clear()
+        addLog("  → MESAJ trimis ($app, $title)")
+        BtSender.send(this, Msg.MESSAGE, app, title, body.take(500))
     }
 
     private fun appLabel(pkg: String): String = try {

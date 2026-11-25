@@ -101,6 +101,7 @@ class ReceiverService : Service() {
         val type = parts.getOrNull(0) ?: return
         val number = parts.getOrNull(1)?.ifBlank { null }
         val name = parts.getOrNull(2)?.ifBlank { null }
+        val text = parts.getOrNull(3)?.ifBlank { null }
         lastStatus = "Primit: $type ${Notifs.label(number, name)}"
         Log.i(TAG, lastStatus)
         when (type) {
@@ -108,6 +109,7 @@ class ReceiverService : Service() {
             Msg.TEST -> Notifs.showIncoming(this, null, null, test = true)
             Msg.ANSWERED, Msg.ENDED -> Notifs.cancelIncoming(this)
             Msg.MISSED -> Notifs.showMissed(this, number, name)
+            Msg.MESSAGE -> Notifs.showMessage(this, number, name, text)
         }
     }
 }

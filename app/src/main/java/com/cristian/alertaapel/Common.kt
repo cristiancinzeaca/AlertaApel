@@ -21,9 +21,10 @@ object Msg {
     const val MISSED = "MISSED"     // apel pierdut
     const val ENDED = "ENDED"       // apel încheiat / respins
     const val TEST = "TEST"
+    const val MESSAGE = "MSG"       // mesaj nou: number = aplicația, name = expeditor, text = conținut
 
-    fun encode(type: String, number: String?, name: String?): String =
-        listOf(type, clean(number), clean(name)).joinToString("\t") + "\n"
+    fun encode(type: String, number: String?, name: String?, text: String? = null): String =
+        listOf(type, clean(number), clean(name), clean(text)).joinToString("\t") + "\n"
 
     private fun clean(s: String?) = (s ?: "").replace('\t', ' ').replace('\n', ' ')
 }
@@ -51,6 +52,7 @@ object Notifs {
     const val CH_SERVICE = "serviciu"
     const val CH_CALL = "apel_intrare_v1"
     const val CH_MISSED = "apel_pierdut"
+    const val CH_MSG = "mesaje"
 
     const val ID_SERVICE_SENDER = 1
     const val ID_SERVICE_RECEIVER = 2
@@ -80,7 +82,11 @@ object Notifs {
         val missed = NotificationChannel(CH_MISSED, "Apeluri pierdute", NotificationManager.IMPORTANCE_DEFAULT)
         missed.description = "Apeluri pierdute pe celălalt telefon"
 
-        nm.createNotificationChannels(listOf(service, call, missed))
+        val msg = NotificationChannel(CH_MSG, "Mesaje de pe celălalt telefon", NotificationManager.IMPORTANCE_HIGH)
+        msg.description = "Mesaje WhatsApp, SMS etc. primite pe celălalt telefon"
+        msg.enableVibration(true)
+
+        nm.createNotificationChannels(listOf(service, call, missed, msg))
     }
 
     private fun openApp(c: Context): PendingIntent =
@@ -134,5 +140,25 @@ object Notifs {
             .setContentIntent(openApp(c))
             .build()
         nm.notify(missedCounter++, n)
+    }
+
+    private val msgIds = HashMap<String, Int>()
+    private var nextMsgId = 1000
+
+    fun showMessage(c: Context, app: String?, sender: String?, text: String?) {
+        val nm = c.getSystemService(NotificationManager::class.java)!!
+        val key = "${app}|${sender}"
+        val id = synchronized(msgIds) { msgIds.getOrPut(key) { nextMsgId++ } }
+        val n = Notification.Builder(c, CH_MSG)
+            .setSmallIcon(android.R.drawable.sym_action_chat)
+            .setContentTitle(listOfNotNull(sender, app?.let { "($it)" }).joinToString(" ").ifBlank { "Mesaj nou" })
+            .setContentText(text ?: "")
+            .setStyle(Notification.BigTextStyle().bigText(text ?: ""))
+            .setCategory(Notification.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setShowWhen(true)
+            .setContentIntent(openApp(c))
+            .build()
+        nm.notify(id, n)
     }
 }

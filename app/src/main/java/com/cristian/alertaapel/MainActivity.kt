@@ -94,7 +94,7 @@ class MainActivity : Activity() {
         root.addView(text("2. Configurare", 17f, true))
         btnTarget = button("Alege telefonul care te anunță") { chooseTarget() }
         root.addView(btnTarget)
-        btnWhatsApp = button("Activează alertele pentru WhatsApp") { openNotificationAccess() }
+        btnWhatsApp = button("Activează mesajele și apelurile WhatsApp") { openNotificationAccess() }
         root.addView(btnWhatsApp)
         btnBattery = button("Scoate aplicația din optimizarea bateriei") { requestBatteryExemption() }
         root.addView(btnBattery)
@@ -124,9 +124,9 @@ class MainActivity : Activity() {
         btnTest.visibility = if (isSender) View.VISIBLE else View.GONE
         btnWhatsApp.visibility = if (isSender) View.VISIBLE else View.GONE
         btnWhatsApp.text = if (hasNotificationAccess())
-            "Apeluri WhatsApp / Telegram etc.: ACTIVE ✔"
+            "Mesaje + apeluri WhatsApp, SMS etc.: ACTIVE ✔"
         else
-            "Activează alertele pentru WhatsApp"
+            "Activează mesajele și apelurile WhatsApp"
         btnTarget.text = "Alege telefonul care te anunță" +
             (Prefs.targetName(this)?.let { "\nAles: $it" } ?: "")
         btnToggle.isEnabled = mode != null
