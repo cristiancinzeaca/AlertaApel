@@ -180,7 +180,8 @@ class SenderService : Service() {
             ?: throw IllegalStateException("Bluetooth indisponibil")
         if (!adapter.isEnabled) throw IllegalStateException("Bluetooth oprit")
         val device = adapter.getRemoteDevice(addr)
-        adapter.cancelDiscovery()
+        // cancelDiscovery() ar cere BLUETOOTH_SCAN pe Android 12+; nu e necesar
+        try { if (adapter.isDiscovering) adapter.cancelDiscovery() } catch (_: SecurityException) {}
         val socket: BluetoothSocket = device.createRfcommSocketToServiceRecord(SERVICE_UUID)
         // dacă ceva se blochează, închidem forțat socket-ul după 8 secunde
         val watchdog = Runnable { try { socket.close() } catch (_: Exception) {} }
