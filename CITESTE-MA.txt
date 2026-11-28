@@ -1,0 +1,171 @@
+﻿MASA DE POKER + JARVIS
+No-Limit Hold'em cu jetoane de joc, fără bani reali.
+
+==================================================
+1. CUM PORNEȘTI
+==================================================
+Deschide folderul „aplicatie” și pornește:
+
+  Masa de Poker.exe
+    - Antrenament cu boți: cash game sau turneu, 2-6 jucători, antrenor în joc.
+      Merge fără internet.
+    - Jarvis: antrenorul separat. Se leagă singur de jocul de pe calculator.
+    - Joc online cu prietenii: singura parte care folosește internetul.
+
+  Jarvis.exe
+    - Deschide direct Jarvis (și pornește ce îi trebuie).
+
+Nu trebuie instalat nimic. Îți trebuie Windows 10 sau 11 cu Microsoft Edge
+(inclus în Windows).
+
+La prima pornire Windows poate afișa „Windows protected your PC”:
+apasă „More info”, apoi „Run anyway”. Programele nu sunt semnate digital.
+
+Programul rămâne în bara de sistem (lângă ceas), ca jocul și Jarvis să
+rămână legate. Din meniul iconiței poți ieși de tot.
+
+==================================================
+2. UNDE SUNT DATELE
+==================================================
+Tot ce învață Jarvis (profilurile adversarilor, mutările care merg,
+sesiunile, analizele) se salvează aici:
+
+  %LOCALAPPDATA%\MasaDePoker\date\jarvis.json
+
+Ca să-l muți pe alt calculator, copiază fișierul în același loc pe
+calculatorul nou (după ce pornești o dată programul acolo).
+
+==================================================
+3. CE E ÎN ARHIVĂ
+==================================================
+  aplicatie\               programele gata de folosit
+  cod-sursa\joc\           simulatorul (jocul cu boți, antrenor, turnee)
+  cod-sursa\jarvis\        Jarvis (sfaturi, profiluri, analiză, învățare)
+  cod-sursa\online\        jocul online: server, pagina jocului, cod comun
+  cod-sursa\windows\       lansatorul Windows și serverul local (C#), iconițe
+  construieste.ps1         reconstruiește cele două .exe din codul sursă
+  android\                 aplicația pentru Android (vezi secțiunea 6)
+  .github\workflows\       construiește singur APK-ul pe GitHub
+
+Reconstruire (după ce modifici codul):
+  powershell -ExecutionPolicy Bypass -File .\construieste.ps1
+
+==================================================
+4. JOCUL ONLINE
+==================================================
+Adresa: https://poker-server-production-cb58.up.railway.app
+Rulează pe Railway (proiectul „masa-de-poker”, serviciile „poker-server”
+și „poker-web”). Pe Railway, fiecare serviciu e un singur fișier:
+  poker-server = online\shared.js + online\server.js
+  poker-web    = online\shared.js + online\web.js + online\client.html
+                 (pagina pusă la final într-un comentariu /*__CLIENT__ ... __END__*/,
+                  cu //SHARED în loc de /*SHARED*/ și fără comentarii /* */ în pagină)
+
+Jarvis se conectează la o masă online cu codul mesei și codul Jarvis de
+6 cifre, primite din joc („Antrenorul” → „Conectează Jarvis”).
+Ceilalți jucători văd eticheta „JARVIS”, iar gazda îl poate interzice.
+
+
+==================================================
+5. JARVIS VISION - CITIREA MESEI DE PE ECRAN
+==================================================
+IMPORTANT: programele din „aplicatie” trebuie reconstruite după orice
+modificare a codului, altfel rulezi versiunea veche:
+  powershell -ExecutionPolicy Bypass -File .\construieste.ps1
+Apoi închide Jarvis din iconița de lângă ceas și pornește-l din nou.
+
+CUM SE FOLOSEȘTE
+  1. Apasă „Alege fereastra / ecranul” și alege fereastra mesei.
+  2. Atât. Recomandarea (FOLD / CHECK / CALL / RAISE) apare singură.
+Nu e nevoie de cheie API, de marcat zone sau de învățat cărțile.
+
+CE FACE SINGUR
+  - Găsește cărțile: o carte e o suprafață de culoare uniformă, mai înaltă
+    decât lată. Rândul de 3-5 cărți = cărțile comune; perechea din
+    jumătatea de jos a mesei = mâna ta.
+  - Citește cărțile după formă: rangul (semnul din stânga-sus) și culoarea
+    (♠ ♥ ♦ ♣) se compară cu aceleași semne desenate cu fonturile din
+    calculator. Merge fără internet.
+  - Citește textul mesei (OCR, are nevoie de internet la prima pornire):
+    potul („Pot: 150”), suma de plătit de pe butonul „Call 40”, „Check”,
+    stack-ul tău (numărul de lângă cărțile tale). Dacă butoanele nu se
+    văd, scrie „Aștept rândul tău”.
+  - Poziția ta: o alegi o dată, apoi avansează singură la fiecare mână.
+
+CÂND TE ÎNTREABĂ
+  Doar dacă o carte nu poate fi citită sigur: îți arată imaginea, scrii de
+  ex. Ah și o ține minte. Dacă a citit greșit, apasă „Citire greșită?
+  Corectez eu”.
+
+IMPORTANT LA CAPTURĂ
+  - Toată masa trebuie să se vadă în fereastra aleasă: cărțile tale,
+    cărțile comune, potul și butoanele. Dacă fereastra jocului e mică și
+    pagina e derulată, Jarvis nu are ce citi. Mărește fereastra.
+  - Pentru „Masa de Poker” (jocul cu boți din acest pachet) nu ai nevoie
+    de captură: Jarvis se leagă direct de joc și primește datele exacte.
+    Folosește captura doar pentru alte mese de antrenament.
+
+CE NU ȘTIE FĂRĂ AJUTOR
+  - Stack-urile și pariurile fiecărui adversar, cine a dat fold, butonul
+    dealer. Fără ele: adversarii au stack-ul tău, toți sunt considerați în
+    mână, iar pariul de plătit e pus la primul adversar. Dacă le vrei
+    citite, folosește „Avansat: marchează zone” (o singură dată pe masă).
+  - Numărul de jucători: îl alegi tu la „Jucători în mână la start”.
+  - Cărți înclinate/rotite, cărți fără contur clar față de masă sau cu
+    desene în loc de rang și culoare standard.
+  - Textul în altă limbă decât engleză/română/spaniolă pe butoane.
+
+Jarvis nu apasă butoane și nu joacă în locul tău. E pentru mese de
+antrenament, cu jetoane de joc.
+
+
+==================================================
+6. ANDROID - JARVIS ÎN FUNDAL
+==================================================
+Aplicația Android are tot ce are versiunea de Windows (jocul cu boți,
+Jarvis, jocul online), plus Jarvis plutitor: o bulă deasupra oricărei
+aplicații, care merge și când ești în altă aplicație.
+
+CUM OBȚII APK-UL (fără să instalezi nimic pe calculator)
+  1. Pe github.com fă un depozit nou (poate fi privat) și urcă în el tot
+     conținutul acestui folder (inclusiv folderele android și .github).
+  2. Deschide tab-ul „Actions”. Construirea pornește singură (5-8 minute).
+  3. Intră în rularea terminată → „Artifacts” → MasaDePoker-APK.
+     Descarci un .zip; înăuntru e MasaDePoker.apk.
+  4. Trimite APK-ul pe telefon și deschide-l. Android cere o dată voie
+     să instaleze aplicații din sursa respectivă (Chrome / Fișierele mele).
+Varianta cu Android Studio: deschizi folderul „android” și apeși Run.
+
+Fiecare APK nou se instalează peste cel vechi și păstrează datele lui
+Jarvis (aplicația e semnată mereu cu aceeași cheie, din android\app).
+
+CUM SE FOLOSEȘTE
+  - „Pornește Jarvis plutitor”: prima dată Android cere „Afișare peste
+    alte aplicații” - activeaz-o pentru Masa de Poker.
+  - Fereastra lui Jarvis: o tragi de bara de sus, „—” o strânge în bulă,
+    „✕” oprește Jarvis. Atingi bula ca s-o deschizi iar.
+  - Bula arată recomandarea în culori: roșu FOLD, verde CHECK/CALL,
+    auriu RAISE, gri când nu e rândul tău. Vibrează scurt la o
+    recomandare nouă cât timp e strânsă.
+  - Cu jocul cu boți din aplicație: alege „Pe acest telefon” în Jarvis
+    (se leagă direct de joc, ca pe Windows).
+  - Cu alte mese de antrenament: în Jarvis apasă „Alege fereastra /
+    ecranul”, apoi „Pornește acum”. Pe Android 14+ poți alege „O singură
+    aplicație” - aplicația mesei. Fereastra se strânge singură în bulă.
+    Pe ecran apare iconița de înregistrare: e captura pentru Jarvis.
+  - Notificarea „Jarvis rulează în fundal” ține aplicația pornită; din ea
+    poți opri Jarvis.
+
+DACĂ TELEFONUL ÎL OPREȘTE
+  Samsung oprește aplicațiile din fundal ca să economisească bateria.
+  În aplicație apasă „Nu lăsa telefonul să-l oprească (baterie)” și, pe
+  Samsung: Setări → Baterie → Limite de utilizare în fundal → scoate
+  Masa de Poker din „aplicații adormite”.
+
+ANDROID - CE E DIFERIT FAȚĂ DE WINDOWS
+  - Datele lui Jarvis sunt în memoria aplicației (se șterg dacă
+    dezinstalezi aplicația).
+  - Captura e micșorată la 1080 pixeli pe lățime, de ajuns pentru cărți.
+  - Fereastra lui Jarvis nu apare în propria captură (apare neagră), ca
+    să nu încurce citirea mesei.
+

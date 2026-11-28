@@ -1,0 +1,1408 @@
+<title>Masa de Poker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: masă ovală de postav cu 2–6 locuri așezate pe margine, tu jos; panou lateral cu setări, clasament, statistici și jurnal. Pe telefon totul pe o coloană. O singură temă, întunecată, ca într-o sală de joc. */
+:root{
+  --ink:#0c1512; --panel:#131f1b; --panel-2:#1a2a24; --line:rgba(236,230,214,.13);
+  --felt:#21664b; --felt-deep:#123b2c; --rail:#4b2f1c; --rail-hi:#7a5130;
+  --brass:#dcae55; --brass-soft:rgba(220,174,85,.18);
+  --cream:#ece6d6; --muted:#98aca1; --fold:#e0735c; --win:#86d6a1;
+  --card:#faf7ee; --card-edge:#d6cdb7; --back-a:#8a2f26; --back-b:#a23d31;
+  --suit-s:#1c1c1c; --suit-h:#c62f2a; --suit-d:#1d5cc0; --suit-c:#1b8247;
+  --log-h:#ef6f68; --log-d:#79a6f0; --log-c:#6fcf8f;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --cw:clamp(32px,8.2vw,56px);   /* cărțile de pe board */
+  --cb:clamp(22px,6vw,38px);     /* cărțile boților */
+  --cm:clamp(38px,10.5vw,58px);  /* cărțile tale */
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--cream)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(34px,6vw,48px);line-height:.95;letter-spacing:.01em;text-transform:uppercase}
+.brand h1 span{color:var(--brass)}
+.sub{margin:6px 0 0;color:var(--muted);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+.play{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* masa */
+.table{position:relative;width:100%;aspect-ratio:16/10;
+  background:radial-gradient(ellipse at 50% 45%,var(--felt) 0%,var(--felt-deep) 80%);
+  border:14px solid var(--rail);border-radius:50%/50%;
+  box-shadow:inset 0 0 0 2px var(--brass-soft),inset 0 0 70px rgba(0,0,0,.45),0 0 0 2px var(--rail-hi),0 22px 40px rgba(0,0,0,.45)}
+@media (max-width:620px){.table{aspect-ratio:3/4;border-width:8px;border-radius:46%/36%}}
+.seat{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;--c:var(--cb);max-width:36%;transition:opacity .2s}
+.seat.me{--c:var(--cm)}
+.seat.out{opacity:.42}
+.plate{display:grid;justify-items:center;padding:3px 10px 4px;border-radius:10px;background:rgba(0,0,0,.5);border:1px solid var(--line);font-size:13px;line-height:1.25;min-width:72px;max-width:100%}
+.pl-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:center}
+.nm{font-weight:600}
+.pos{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.sty{font-size:11px;color:var(--muted)}
+.hud{font-family:var(--f-mono);font-size:10.5px;color:var(--cream);opacity:.8;white-space:nowrap}
+.hud[hidden]{display:none}
+.coach{border:1px solid rgba(220,174,85,.45);background:var(--brass-soft);border-radius:10px;padding:10px 12px;display:grid;gap:6px;margin-bottom:10px}
+.coach[hidden]{display:none}
+.coach-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.coach-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.coach-act{font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.02em;text-transform:uppercase;line-height:1.1}
+.coach-apply{margin-left:auto;min-height:34px;padding:4px 12px;border-radius:8px;border:1px solid var(--brass);background:transparent;color:var(--brass);font-weight:600;cursor:pointer}
+.coach ul{margin:0;padding-left:18px;font-size:13.5px}
+.coach li{margin:2px 0}
+.stack{font-family:var(--f-mono);color:var(--brass);font-size:13px}
+.dealer{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--cream);color:var(--ink);font-family:var(--f-display);font-weight:800;font-size:11px;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.dealer[hidden]{display:none}
+.seat.active .plate{border-color:var(--brass);box-shadow:0 0 0 3px var(--brass-soft)}
+.seat.winner .plate{border-color:var(--win);box-shadow:0 0 0 3px rgba(134,214,161,.25)}
+.tag{min-height:16px;font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;line-height:16px;white-space:nowrap}
+.tag.fold{color:var(--fold)} .tag.aggr{color:var(--brass)}
+.thinking::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.cards{display:flex;gap:3px;min-height:calc(var(--c)*1.4)}
+.card{width:var(--c);aspect-ratio:5/7;border-radius:calc(var(--c)*.12);background:var(--card);border:1px solid var(--card-edge);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:.9;box-shadow:0 3px 8px rgba(0,0,0,.35);font-family:var(--f-display);font-weight:800;animation:deal .28s ease-out both}
+.card .r{font-size:calc(var(--c)*.52)}
+.card .s{font-size:calc(var(--c)*.4);font-family:var(--f-body)}
+.card.s-s{color:var(--suit-s)} .card.s-h{color:var(--suit-h)} .card.s-d{color:var(--suit-d)} .card.s-c{color:var(--suit-c)}
+.card.back{background:repeating-linear-gradient(45deg,var(--back-a) 0 4px,var(--back-b) 4px 8px);border:2px solid var(--card)}
+.card.slot{background:transparent;border:1.5px dashed rgba(236,230,214,.2);box-shadow:none;animation:none}
+.card.dim{opacity:.5}
+@keyframes deal{from{transform:translateY(-8px);opacity:.2}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}.thinking::after{animation:none;content:"..."}.seat{transition:none}}
+.betchip{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);z-index:1}
+.chips{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:13px;padding:1px 8px 1px 3px;border-radius:999px;background:rgba(0,0,0,.35);white-space:nowrap}
+.chips::before{content:"";width:15px;height:15px;border-radius:50%;background:var(--brass);border:3px dashed var(--cream);box-sizing:border-box}
+.center{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;--c:var(--cw)}
+.pot{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pot b{font-family:var(--f-mono);font-weight:500;font-size:16px;color:var(--brass);letter-spacing:0}
+.board{display:flex;gap:5px}
+
+/* comenzi */
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.info{display:flex;flex-wrap:wrap;gap:8px;min-height:30px}
+.chip-i{font-size:13px;padding:4px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
+.chip-i b{font-family:var(--f-mono);font-weight:500}
+.chip-i.good{border-color:rgba(134,214,161,.45);color:var(--win)}
+.chip-i.bad{border-color:rgba(224,115,92,.45);color:var(--fold)}
+.chip-i.muted{color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{flex:1 1 120px;min-height:48px;padding:10px 16px;border-radius:10px;border:1px solid transparent;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,filter .15s}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.fold{background:transparent;border-color:var(--fold);color:var(--fold)}
+.btn.call{background:var(--cream);color:var(--ink)}
+.btn.raise{background:var(--brass);color:var(--ink)}
+.btn.ghost{flex:0 0 auto;min-height:40px;background:transparent;border-color:var(--line);color:var(--cream)}
+.btn:not(:disabled):hover{filter:brightness(1.08)}
+kbd{font-family:var(--f-mono);font-size:11px;padding:1px 5px;border-radius:4px;border:1px solid currentColor;opacity:.6}
+@media (hover:none){kbd{display:none}}
+.sizing{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{flex:1 1 60px;min-height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font-size:13px;cursor:pointer}
+.presets button:disabled{opacity:.35;cursor:not-allowed}
+.slider-row{display:flex;gap:10px;align-items:center}
+.slider-row input[type=range]{flex:1;min-width:0;accent-color:var(--brass);height:28px}
+.slider-row input[type=number]{width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--ink);font-family:var(--f-mono);text-align:right}
+.wait{min-height:48px;display:flex;align-items:center;color:var(--muted)}
+.result{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.result > div{min-width:0;flex:1 1 260px}
+.res-title{margin:0;font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1.1}
+.res-title.win{color:var(--win)} .res-title.lose{color:var(--fold)}
+.res-detail{margin:4px 0 0;color:var(--muted);font-size:14px}
+.result .btn{flex:0 1 240px}
+
+/* panou lateral */
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.panel h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.panel h3{margin:12px 0 6px;font-size:13px;font-weight:500;color:var(--cream)}
+.panel h3:first-of-type{margin-top:0}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:10px;background:var(--ink);border:1px solid var(--line)}
+.seg button{min-height:34px;border:0;border-radius:7px;background:transparent;font-size:13.5px;cursor:pointer;color:var(--muted);padding:0 4px}
+.seg button[aria-checked="true"]{background:var(--brass);color:var(--ink);font-weight:600}
+.note{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.toggle{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:5px 0;cursor:pointer}
+.toggle input{accent-color:var(--brass);width:17px;height:17px;margin-top:2px;flex:none}
+.toggle.off{opacity:.45;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.stats div{background:var(--panel-2);border-radius:9px;padding:8px 10px}
+.stats dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stats dd{margin:2px 0 0;font-family:var(--f-mono);font-size:16px;font-variant-numeric:tabular-nums}
+.board-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.board-tbl th{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 0 6px}
+.board-tbl th.n,.board-tbl td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.board-tbl td{padding:5px 0;border-top:1px solid var(--line)}
+.board-tbl td small{color:var(--muted)}
+.pos-v{color:var(--win)} .neg-v{color:var(--fold)}
+.log{list-style:none;margin:0;padding:0;max-height:330px;overflow-y:auto;font-family:var(--f-mono);font-size:12.5px;line-height:1.55;color:var(--muted)}
+.log li{padding:1px 0;overflow-wrap:anywhere}
+.log li.hd{color:var(--cream);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+.log li.hd:first-child{margin-top:0;border-top:0;padding-top:0}
+.log li.win{color:var(--win)} .log li.lose{color:var(--fold)} .log li.st{color:var(--brass)}
+.log .h{color:var(--log-h)} .log .d{color:var(--log-d)} .log .c{color:var(--log-c)} .log .s{color:var(--cream)}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Masa de <span>Poker</span></h1>
+      <p class="sub">No-Limit Hold'em · 2–6 jucători · blinduri 5/10 · 1.000 jetoane · fără bani reali</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span id="jvChip" hidden style="font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);border:1px solid var(--brass);border-radius:999px;padding:3px 10px">Jarvis conectat</span>
+      <button class="btn ghost" id="newGame" type="button">Joc nou</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="play" aria-label="Masa de joc">
+      <div class="table" id="table">
+        <div class="center">
+          <div class="pot" id="pot"></div>
+          <div class="board" id="board"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="info" id="info" aria-live="polite"></div>
+        <div id="actionArea">
+          <div class="coach" id="coach" hidden>
+            <div class="coach-head">
+              <span class="coach-label" id="coachLabel">Antrenorul spune</span>
+              <span class="coach-act" id="coachAct"></span>
+              <button class="coach-apply" id="coachApply" type="button">Aplică <kbd>A</kbd></button>
+            </div>
+            <ul id="coachWhy"></ul>
+          </div>
+          <div class="actions">
+            <button class="btn fold" id="btnFold" type="button">Fold <kbd>F</kbd></button>
+            <button class="btn call" id="btnCall" type="button">Check <kbd>C</kbd></button>
+            <button class="btn raise" id="btnRaise" type="button">Raise <kbd>R</kbd></button>
+          </div>
+          <div class="sizing">
+            <div class="presets" id="presets">
+              <button type="button" data-p="min">Min</button>
+              <button type="button" data-p="0.5">½ pot</button>
+              <button type="button" data-p="0.75">¾ pot</button>
+              <button type="button" data-p="1">Pot</button>
+              <button type="button" data-p="all">All-in</button>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="raiseRange" aria-label="Mărimea pariului">
+              <input type="number" id="raiseAmt" inputmode="numeric" aria-label="Pariază până la">
+            </div>
+          </div>
+        </div>
+        <div class="wait" id="waitArea" hidden></div>
+        <div class="result" id="resultArea" hidden>
+          <div>
+            <p class="res-title" id="resTitle"></p>
+            <p class="res-detail" id="resDetail"></p>
+          </div>
+          <button class="btn call" id="btnNext" type="button">Mâna următoare <kbd>Enter</kbd></button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>Masa</h2>
+        <h3>Tipul de joc</h3>
+        <div class="seg" id="modeSeg" role="radiogroup" aria-label="Tipul de joc">
+          <button type="button" role="radio" data-m="cash" id="md-cash">Cash game</button>
+          <button type="button" role="radio" data-m="turneu" id="md-turneu">Turneu</button>
+        </div>
+        <h3>Jucători la masă</h3>
+        <div class="seg" id="playersSeg" role="radiogroup" aria-label="Număr de jucători">
+          <button type="button" role="radio" data-n="2" id="pl-2">2</button>
+          <button type="button" role="radio" data-n="3" id="pl-3">3</button>
+          <button type="button" role="radio" data-n="4" id="pl-4">4</button>
+          <button type="button" role="radio" data-n="5" id="pl-5">5</button>
+          <button type="button" role="radio" data-n="6" id="pl-6">6</button>
+        </div>
+        <h3>Stilul boților</h3>
+        <div class="seg" id="styleSeg" role="radiogroup" aria-label="Stilul boților">
+          <button type="button" role="radio" data-s="mix" id="st-mix">Mix</button>
+          <button type="button" role="radio" data-s="prudent" id="st-prudent">Prudent</button>
+          <button type="button" role="radio" data-s="echilibrat" id="st-echilibrat">Echilibrat</button>
+          <button type="button" role="radio" data-s="agresiv" id="st-agresiv">Agresiv</button>
+        </div>
+        <h3>Viteza boților</h3>
+        <div class="seg" id="speedSeg" role="radiogroup" aria-label="Viteza boților">
+          <button type="button" role="radio" data-v="normal" id="sp-normal">Normală</button>
+          <button type="button" role="radio" data-v="rapid" id="sp-rapid">Rapidă</button>
+        </div>
+        <p class="note" id="tableNote"></p>
+      </section>
+      <section class="panel" id="tourPanel" hidden>
+        <h2>Turneul</h2>
+        <dl class="stats" id="tourStats"></dl>
+        <p class="note" id="tourNote"></p>
+      </section>
+      <section class="panel">
+        <h2>Antrenorul</h2>
+        <h3>Stilul antrenorului</h3>
+        <div class="seg" id="coachSeg" role="radiogroup" aria-label="Stilul antrenorului">
+          <button type="button" role="radio" data-c="sigur" id="cs-sigur">Sigur</button>
+          <button type="button" role="radio" data-c="echilibrat" id="cs-echilibrat">Echilibrat</button>
+          <button type="button" role="radio" data-c="agresiv" id="cs-agresiv">Agresiv</button>
+        </div>
+        <p class="note" id="coachNote"></p>
+        <label class="toggle" style="margin-top:8px"><input type="checkbox" id="optCoach"> <span>Arată sfatul antrenorului când e rândul meu</span></label>
+        <label class="toggle"><input type="checkbox" id="optHud"> <span>HUD pe fiecare bot: VPIP/PFR și agresivitate (AF)</span></label>
+        <label class="toggle"><input type="checkbox" id="optAuto"> <span>Lasă antrenorul să joace în locul meu (simulare)</span></label>
+        <p class="note">Antrenorul vede doar ce vezi și tu: cărțile tale, masa, acțiunile și statisticile adunate despre fiecare bot. Cărțile boților nu le vede.</p>
+      </section>
+      <section class="panel">
+        <h2>Ce a învățat antrenorul</h2>
+        <table class="board-tbl" id="learnTbl"></table>
+        <p class="note">Învață din mutările făcute după sfatul lui (cu „Aplică” sau în simulare). O mutare reușește când mâna se câștigă fără showdown. Ce merge face mai des, ce nu merge face mai rar, separat pentru fiecare bot. Se păstrează și data viitoare.</p>
+        <button class="btn ghost" id="learnReset" type="button" style="margin-top:8px">Șterge ce a învățat</button>
+      </section>
+      <section class="panel">
+        <h2>Ajutor la învățare</h2>
+        <label class="toggle"><input type="checkbox" id="optEq"> <span>Arată equity-ul meu și pot odds</span></label>
+        <label class="toggle"><input type="checkbox" id="optOpen"> <span>Joacă cu cărțile boților la vedere</span></label>
+        <label class="toggle" id="sitLabel"><input type="checkbox" id="optSit"> <span>Stai pe margine și privește boții jucând între ei</span></label>
+      </section>
+      <section class="panel">
+        <h2>Clasament</h2>
+        <table class="board-tbl" id="leader"></table>
+      </section>
+      <section class="panel">
+        <h2>Sesiunea ta</h2>
+        <dl class="stats" id="stats"></dl>
+      </section>
+      <section class="panel">
+        <h2>Jurnalul mâinilor</h2>
+        <ol class="log" id="log"></ol>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const RDISP = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const SUITSYM = ['♠','♥','♦','♣'];
+const SUITCLS = ['s','h','d','c'];
+const SUITNAME = ['pică','cupă','caro','treflă'];
+let SB = 5, BB = 10, ANTE = 0;
+const START = 1000;
+/* ---------- turneu ---------- */
+const LEVELS = [[10,20,0],[15,30,0],[25,50,5],[50,100,10],[75,150,15],[100,200,25],[150,300,40],[200,400,50],[300,600,75],[400,800,100],[600,1200,150],[1000,2000,250],[1500,3000,400],[2500,5000,600]];
+const HANDS_PER_LEVEL = 8, TSTART = 1500;
+let TOUR = null;
+let TSTATS = { played:0, itm:0, wins:0, placeSum:0 };
+try { Object.assign(TSTATS, JSON.parse(localStorage.getItem('poker-tstats') || '{}')); } catch (e) {}
+const saveTStats = () => { try { localStorage.setItem('poker-tstats', JSON.stringify(TSTATS)); } catch (e) {} };
+const payouts = n => n >= 6 ? [50, 30, 20] : n >= 4 ? [65, 35] : [100];
+function icm(stacks, pay){
+  const res = stacks.map(() => 0);
+  const rec = (left, place, prob) => {
+    if (place >= pay.length || !left.length) return;
+    const tot = left.reduce((s, i) => s + stacks[i], 0);
+    for (const i of left){ const p = prob * stacks[i] / tot; res[i] += p * pay[place]; rec(left.filter(j => j !== i), place + 1, p); }
+  };
+  rec(stacks.map((s, i) => i).filter(i => stacks[i] > 0), 0, 1);
+  return res;
+}
+// cât de larg se dă all-in (push) cu stivă mică, după tabelele push/fold
+function pushPct(eff, behind){
+  const T = [[2,.85],[4,.68],[6,.52],[8,.42],[10,.34],[12,.28],[15,.22]];
+  let v = T[T.length - 1][1];
+  for (let k = 0; k < T.length; k++){
+    if (eff <= T[k][0]){ if (k === 0){ v = T[0][1]; break; } const [e0, v0] = T[k - 1], [e1, v1] = T[k]; v = v0 + (v1 - v0) * (eff - e0) / (e1 - e0); break; }
+  }
+  return Math.max(.04, v * Math.pow(.8, Math.max(0, behind - 1)));
+}
+/* ---------- ce învață antrenorul ---------- */
+const MOVES = { steal:'Furt de blinduri', light3:'3-bet light', cbet:'Continuation bet', barrel:'Al doilea pariu', semi:'Semi-bluff', bluff:'Bluff', push:'All-in (push)' };
+let LEARN = { g:{}, o:{} };
+try { Object.assign(LEARN, JSON.parse(localStorage.getItem('poker-learn') || '{}')); } catch (e) {}
+const saveLearn = () => { try { localStorage.setItem('poker-learn', JSON.stringify(LEARN)); } catch (e) {} };
+function learnStat(tag, opp){
+  const g = LEARN.g[tag] || { t:0, w:0 }, o = (opp && LEARN.o[opp] && LEARN.o[opp][tag]) || { t:0, w:0 };
+  const t = o.t + g.t * .3, w = o.w + g.w * .3;
+  return { rate: (w + 1) / (t + 2), tries: o.t + g.t, oT: o.t, oW: o.w, gT: g.t, gW: g.w };
+}
+// > 1 când mutarea a mers mai bine decât trebuie ca să fie profitabilă, < 1 când n-a mers
+function learnFactor(tag, opp, breakeven){
+  const s = learnStat(tag, opp);
+  if (s.tries < 3) return 1;
+  return Math.max(.35, Math.min(1.7, s.rate / breakeven));
+}
+function learnNote(tag, opp){
+  const s = learnStat(tag, opp);
+  if (s.oT >= 2) return `Din experiență: ${MOVES[tag].toLowerCase()} contra lui ${opp} a reușit de ${s.oW} ori din ${s.oT}.`;
+  if (s.gT >= 3) return `Din experiență: ${MOVES[tag].toLowerCase()} a reușit de ${s.gW} ori din ${s.gT} până acum.`;
+  return '';
+}
+function learnRecord(tag, opp, ok){
+  const g = LEARN.g[tag] = LEARN.g[tag] || { t:0, w:0 }; g.t++; if (ok) g.w++;
+  if (opp){ const o = (LEARN.o[opp] = LEARN.o[opp] || {})[tag] = (LEARN.o[opp] || {})[tag] || { t:0, w:0 }; o.t++; if (ok) o.w++; }
+  saveLearn();
+}
+const STREETS = ['Preflop', 'Flop', 'Turn', 'River'];
+const BOT_NAMES = ['Vlad', 'Ioana', 'Radu', 'Elena', 'Mihai'];
+const MIX = ['echilibrat', 'agresiv', 'prudent', 'agresiv', 'echilibrat'];
+
+const STYLES = {
+  prudent:    {label:'Prudent',    pfRaise:.58, raise:.78, bet:.62, bluff:.05, margin:.06,  respect:.12, slow:.10},
+  echilibrat: {label:'Echilibrat', pfRaise:.54, raise:.72, bet:.56, bluff:.14, margin:0,    respect:.08, slow:.15},
+  agresiv:    {label:'Agresiv',    pfRaise:.50, raise:.64, bet:.50, bluff:.28, margin:-.05, respect:.04, slow:.05}
+};
+
+/* ---------- evaluarea mâinilor ---------- */
+function straightTop(mask){
+  const m = (mask << 1) | ((mask >> 12) & 1);
+  for (let h = 13; h >= 4; h--) if (((m >> (h - 4)) & 31) === 31) return h - 1;
+  return -1;
+}
+function pack(cat, arr){ let s = cat; for (let i = 0; i < 5; i++) s = s * 16 + ((arr[i] ?? -1) + 1); return s; }
+function evalHand(cards){
+  const cnt = new Array(13).fill(0), sc = [0,0,0,0], sm = [0,0,0,0]; let all = 0;
+  for (const c of cards){ const r = c >> 2, s = c & 3; cnt[r]++; sc[s]++; sm[s] |= 1 << r; all |= 1 << r; }
+  let fs = -1; for (let s = 0; s < 4; s++) if (sc[s] >= 5) fs = s;
+  if (fs >= 0){ const t = straightTop(sm[fs]); if (t >= 0) return pack(8, [t]); }
+  let quad = -1; const trips = [], pairs = [];
+  for (let r = 12; r >= 0; r--){ if (cnt[r] === 4) quad = r; else if (cnt[r] === 3) trips.push(r); else if (cnt[r] === 2) pairs.push(r); }
+  const kick = (excl, n) => { const k = []; for (let r = 12; r >= 0 && k.length < n; r--) if (cnt[r] > 0 && !excl.includes(r)) k.push(r); return k; };
+  if (quad >= 0) return pack(7, [quad, ...kick([quad], 1)]);
+  if (trips.length && (trips.length > 1 || pairs.length)){
+    const p = Math.max(trips.length > 1 ? trips[1] : -1, pairs.length ? pairs[0] : -1);
+    return pack(6, [trips[0], p]);
+  }
+  if (fs >= 0){ const k = []; for (let r = 12; r >= 0 && k.length < 5; r--) if ((sm[fs] >> r) & 1) k.push(r); return pack(5, k); }
+  const st = straightTop(all); if (st >= 0) return pack(4, [st]);
+  if (trips.length) return pack(3, [trips[0], ...kick([trips[0]], 2)]);
+  if (pairs.length >= 2) return pack(2, [pairs[0], pairs[1], ...kick([pairs[0], pairs[1]], 1)]);
+  if (pairs.length === 1) return pack(1, [pairs[0], ...kick([pairs[0]], 3)]);
+  return pack(0, kick([], 5));
+}
+function handName(sc){
+  const cat = Math.floor(sc / 1048576); const d = []; let x = sc % 1048576;
+  for (let i = 0; i < 5; i++){ d.unshift((x % 16) - 1); x = Math.floor(x / 16); }
+  const R = i => RDISP[d[i]];
+  switch (cat){
+    case 8: return d[0] === 12 ? 'Chintă roială' : `Chintă de culoare până la ${R(0)}`;
+    case 7: return `Careu de ${R(0)}`;
+    case 6: return `Full house, ${R(0)} peste ${R(1)}`;
+    case 5: return `Culoare cu ${R(0)} sus`;
+    case 4: return `Chintă până la ${R(0)}`;
+    case 3: return `Trei de ${R(0)}`;
+    case 2: return `Două perechi, ${R(0)} și ${R(1)}`;
+    case 1: return `Pereche de ${R(0)}`;
+    default: return `Carte mare ${R(0)}`;
+  }
+}
+function startLabel(h){
+  const a = Math.max(h[0] >> 2, h[1] >> 2), b = Math.min(h[0] >> 2, h[1] >> 2);
+  if (a === b) return `${RDISP[a]}${RDISP[b]} · pereche`;
+  return `${RDISP[a]}${RDISP[b]}${(h[0] & 3) === (h[1] & 3) ? 's · aceeași culoare' : 'o · culori diferite'}`;
+}
+// equity contra k mâini aleatorii
+function equity(hole, board, k, iters){
+  k = Math.max(1, k);
+  const used = new Set([...hole, ...board]); const rest = [];
+  for (let c = 0; c < 52; c++) if (!used.has(c)) rest.push(c);
+  const need = 5 - board.length, n = rest.length, draw = 2 * k + need; let score = 0;
+  for (let it = 0; it < iters; it++){
+    for (let i = 0; i < draw; i++){ const j = i + Math.floor(Math.random() * (n - i)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
+    const full = board.concat(rest.slice(2 * k, draw));
+    const me = evalHand(hole.concat(full));
+    let best = 0, ties = 0, lost = false;
+    for (let o = 0; o < k; o++){
+      const s = evalHand([rest[2 * o], rest[2 * o + 1]].concat(full));
+      if (s > me){ lost = true; break; }
+      if (s === me) ties++;
+    }
+    if (!lost) score += 1 / (ties + 1);
+  }
+  return score / iters;
+}
+function shuffled(){
+  const d = [...Array(52).keys()];
+  for (let i = 51; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  return d;
+}
+const cardText = c => `${RDISP[c >> 2]}${SUITSYM[c & 3]}`;
+const cardLog = c => `<span class="${SUITCLS[c & 3]}">${cardText(c)}</span>`;
+const fmt = n => Math.round(n).toLocaleString('ro-RO');
+
+/* ---------- setări ---------- */
+const SET = { players:6, style:'mix', speed:'normal', showEq:true, openCards:false, sitOut:false, coach:true, hud:true, autoCoach:false, coachStyle:'echilibrat', mode:'cash' };
+try { Object.assign(SET, JSON.parse(localStorage.getItem('poker-settings') || '{}')); } catch (e) {}
+if (!(SET.style in STYLES) && SET.style !== 'mix') SET.style = 'mix';
+SET.players = Math.min(6, Math.max(2, Number(SET.players) || 6));
+SET.sitOut = false; SET.autoCoach = false;
+function saveSet(){ try { localStorage.setItem('poker-settings', JSON.stringify({ ...SET, sitOut:false, autoCoach:false })); } catch (e) {} }
+
+/* ---------- jucătorii și starea ---------- */
+const P = [];
+const blank = () => ({ hole:[], bet:0, com:0, folded:true, allin:false, acted:false, last:'', inHand:false, lastEq:null,
+  hx:{ pfAct:'none', postAgg:0, postCall:0, vpip:false, pfr:false } });
+const newStats = () => ({ hands:0, vpip:0, pfr:0, agg:0, calls:0, faced:0, foldFaced:0 });
+function makePlayer(i){
+  return i === 0 ? { name:'Tu', human:true, stack:START, buyins:1, st:newStats(), ...blank() }
+                 : { name:BOT_NAMES[i - 1], human:false, stack:START, buyins:1, st:newStats(), ...blank() };
+}
+// statistici observate, amestecate cu valori tipice cât timp sunt puține mâini
+function rates(p){
+  const s = p.st;
+  return { vpip:(s.vpip + 3.5) / (s.hands + 10), pfr:(s.pfr + 1.8) / (s.hands + 10),
+    af:(s.agg + 6) / (s.calls + 4), ftb:(s.foldFaced + 2.7) / (s.faced + 6) };
+}
+
+/* ---------- antrenorul ---------- */
+function chen(a, b, suited){
+  const hi = Math.max(a, b), lo = Math.min(a, b);
+  const val = r => r === 12 ? 10 : r === 11 ? 8 : r === 10 ? 7 : r === 9 ? 6 : (r + 2) / 2;
+  if (hi === lo) return Math.max(5, val(hi) * 2);
+  let s = val(hi) + (suited ? 2 : 0);
+  const gap = hi - lo - 1;
+  s -= gap === 0 ? 0 : gap === 1 ? 1 : gap === 2 ? 2 : gap === 3 ? 4 : 5;
+  if (gap <= 1 && hi < 10) s += 1;
+  return Math.ceil(s);
+}
+const PCT = new Float32Array(52 * 52);
+(() => {
+  const list = [];
+  for (let i = 0; i < 52; i++) for (let j = i + 1; j < 52; j++){
+    const a = i >> 2, b = j >> 2;
+    list.push([i, j, chen(a, b, (i & 3) === (j & 3)) * 100 + Math.max(a, b) * 2 + Math.min(a, b) * .1]);
+  }
+  list.sort((x, y) => y[2] - x[2]);
+  list.forEach((c, k) => { const v = (k + .5) / list.length; PCT[c[0] * 52 + c[1]] = v; PCT[c[1] * 52 + c[0]] = v; });
+})();
+const pctOf = h => PCT[h[0] * 52 + h[1]];
+const OPEN = { UTG:.15, HJ:.19, CO:.27, BTN:.45, SB:.38, 'BTN/SB':.75, BB:1 };
+function popcount(x){ let n = 0; while (x){ n += x & 1; x >>= 1; } return n; }
+function hasDraw(h, board){
+  if (board.length < 3 || board.length >= 5) return false;
+  const cs = h.concat(board), sc = [0,0,0,0];
+  cs.forEach(c => sc[c & 3]++);
+  for (let s = 0; s < 4; s++) if (sc[s] === 4 && ((h[0] & 3) === s || (h[1] & 3) === s)) return true;
+  let m = 0, hm = 0;
+  cs.forEach(c => { m |= 1 << ((c >> 2) + 1); });
+  h.forEach(c => { hm |= 1 << ((c >> 2) + 1); });
+  if (m & (1 << 13)) m |= 1; if (hm & (1 << 13)) hm |= 1;
+  for (let lo = 0; lo <= 9; lo++){ if (popcount((m >> lo) & 31) === 4 && ((hm >> lo) & 31)) return true; }
+  return false;
+}
+// range-ul estimat al unui adversar, din acțiunile lui în mâna asta și din statisticile lui
+function rangeOf(j){
+  const p = P[j], hx = p.hx, r = rates(p);
+  let t = 1;
+  if (hx.pfAct === 'raise') t = Math.max(.04, r.pfr * (hx.pfRaises > 1 ? .4 : 1));
+  else if (hx.pfAct === 'call') t = Math.max(.08, Math.min(r.vpip, .5));
+  else if (hx.pfAct === 'limp') t = Math.min(1, r.vpip * 1.2);
+  const bluff = Math.min(.45, Math.max(.08, .1 + .08 * (r.af - 1)));
+  return { t, agg: hx.postAgg > 0, called: hx.postCall > 0, bluff };
+}
+function accepts(h, R, boardCat){
+  if (PCT[h[0] * 52 + h[1]] > R.t) return false;
+  if (G.board.length < 3 || (!R.agg && !R.called)) return true;
+  const strong = Math.floor(evalHand(h.concat(G.board)) / 1048576) > boardCat;
+  if (strong) return true;
+  const draw = hasDraw(h, G.board);
+  if (R.agg) return (draw && Math.random() < .6) || Math.random() < R.bluff;
+  return draw || Math.random() < .3;
+}
+function rangeEquity(hole, opps, iters){
+  const used = new Set([...hole, ...G.board]); const rest = [];
+  for (let c = 0; c < 52; c++) if (!used.has(c)) rest.push(c);
+  const n = rest.length, need = 5 - G.board.length, ranges = opps.map(rangeOf);
+  const boardCat = G.board.length >= 3 ? Math.floor(evalHand(G.board) / 1048576) : -1;
+  const swap = (a, b) => { const t = rest[a]; rest[a] = rest[b]; rest[b] = t; };
+  let score = 0;
+  for (let it = 0; it < iters; it++){
+    let pos = 0; const hands = [];
+    for (const R of ranges){
+      let tries = 0, h;
+      do {
+        swap(pos, pos + Math.floor(Math.random() * (n - pos)));
+        swap(pos + 1, pos + 1 + Math.floor(Math.random() * (n - pos - 1)));
+        h = [rest[pos], rest[pos + 1]]; tries++;
+      } while (tries < 25 && !accepts(h, R, boardCat));
+      hands.push(h); pos += 2;
+    }
+    for (let k = 0; k < need; k++){ swap(pos, pos + Math.floor(Math.random() * (n - pos))); pos++; }
+    const full = G.board.concat(rest.slice(pos - need, pos));
+    const me = evalHand(hole.concat(full));
+    let ties = 0, lost = false;
+    for (const h of hands){ const s = evalHand(h.concat(full)); if (s > me){ lost = true; break; } if (s === me) ties++; }
+    if (!lost) score += 1 / (ties + 1);
+  }
+  return score / iters;
+}
+const COACH = {
+  sigur:      { label:'Sigur',      open:1.0,  threeMul:.30, callMul:.70, cbet:0,   bluffFtb:.55, value:.68, thin:.56, raise:.78, semiRaise:false, steal:0,   light3:0,   barrel:false,
+                note:'Joacă doar mâini bune și rar bluffează. Pierde puțin, dar câștigă și puțin.' },
+  echilibrat: { label:'Echilibrat', open:1.25, threeMul:.40, callMul:.80, cbet:.65, bluffFtb:.45, value:.64, thin:.54, raise:.74, semiRaise:true,  steal:.08, light3:.25, barrel:true,
+                note:'Deschide mai larg, face continuation bet, fură blindurile și bluffează când adversarul dă des fold.' },
+  agresiv:    { label:'Agresiv',    open:1.55, threeMul:.55, callMul:.85, cbet:.85, bluffFtb:.38, value:.60, thin:.52, raise:.70, semiRaise:true,  steal:.15, light3:.5,  barrel:true,
+                note:'Presiune maximă: multe raise-uri, 3-bet-uri light, bluff-uri pe mai multe străzi. Câștigă mult contra boților prudenți, dar are variație mare.' }
+};
+function coachAdvice(){
+  const me = P[0], L = legal(0), pre = G.street === 0, pos = G.pos[0], cfg = COACH[SET.coachStyle] || COACH.echilibrat;
+  const opps = P.map((_, j) => j).filter(j => j !== 0 && alive(j)), k = opps.length;
+  const eqR = rangeEquity(me.hole, opps, k > 2 ? 500 : 800);
+  const pt = potTotal(), need = L.toCall > 0 ? L.callAmt / (pt + L.callAmt) : 0;
+  const pc = v => Math.round(v * 100) + '%';
+  const to = v => Math.max(L.minTo, Math.min(L.maxTo, Math.round(v / 5) * 5));
+  const suited = (me.hole[0] & 3) === (me.hole[1] & 3);
+  const why = []; let rec;
+  const agg = G.lastAgg >= 0 && G.lastAgg !== 0 ? G.lastAgg : -1;
+  const avg = (arr, f) => arr.length ? arr.reduce((s, j) => s + f(rates(P[j])), 0) / arr.length : 0;
+  const opp1 = k === 1 ? P[opps[0]].name : (agg >= 0 ? P[agg].name : null);
+  const effBB = Math.min(me.stack + me.bet, Math.max(0, ...opps.map(j => P[j].stack + P[j].bet))) / BB;
+  // ICM: aproape de premii, a pierde toate jetoanele costă mai mult decât îți aduce să le dublezi
+  let icmPen = 0, icmWhy = '';
+  if (TOUR){
+    const live = P.filter(p => !p.out), paidN = payouts(TOUR.startN).length;
+    if (live.length === paidN + 1){
+      const big = live.every(p => p === me || p.stack <= me.stack);
+      icmPen = big ? .03 : .08;
+      icmWhy = `Bubble: mai e un singur jucător de eliminat până la premii. Un call all-in îți cere cu ${pc(icmPen)} mai mult equity decât de obicei${big ? ', dar ca lider poți presa stivele mici' : ''}.`;
+    } else if (live.length <= paidN && live.length > 1){ icmPen = .03; icmWhy = 'Ești pe bani: fiecare loc urcat valorează, deci ai grijă la call-urile all-in.'; }
+  }
+  const needI = need + (L.callAmt >= me.stack * .4 ? icmPen : 0);
+  if (TOUR || effBB <= 25) why.push(`Stiva ta efectivă: ${effBB.toFixed(1)} BB.`);
+  if (pre){
+    const myPct = pctOf(me.hole);
+    why.push(`${startLabel(me.hole)} e în top ${Math.max(1, Math.round(myPct * 100))}% din mâinile de start.`);
+    if (effBB <= 12){
+      const behind = P.filter((q, j) => j !== 0 && canAct(j) && !q.acted).length;
+      const pp = Math.min(1, pushPct(effBB, behind) * cfg.open / 1.25 * learnFactor('push', null, .45));
+      if (G.currentBet <= BB){
+        if (myPct <= pp && L.canRaise) rec = { type:'raise', to:L.maxTo, tag:'push', opp:null };
+        else rec = L.toCall === 0 ? { type:'check' } : { type:'fold' };
+        why.push(`Cu ${effBB.toFixed(1)} BB nu mai ai loc de raise mic și joc pe flop: aici e all-in sau fold. Cu ${behind} ${behind === 1 ? 'jucător' : 'jucători'} după tine, dai all-in cam cu top ${pc(pp)} din mâini, iar mâna ta ${rec.type === 'raise' ? 'intră' : 'nu intră'}.`);
+      } else if (eqR >= needI){
+        rec = (L.canRaise && myPct <= pp * .4) ? { type:'raise', to:L.maxTo } : { type:'call' };
+        why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e peste cât îți trebuie (${pc(needI)}): merită să intri cu toată stiva.`);
+      } else { rec = { type:'fold' }; why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e sub cât îți trebuie (${pc(needI)}).`); }
+      if (icmWhy) why.push(icmWhy);
+      if (rec.tag){ const ln = learnNote('push', null); if (ln) why.push(ln); }
+      why.push(`Equity estimat contra range-urilor lor: ${pc(eqR)}${need ? ` · pot odds: îți trebuie ${pc(need)}` : ''}.`);
+      return { rec, why, eqR };
+    }
+    const limpers = opps.filter(j => P[j].hx.pfAct === 'limp').length;
+    if (L.toCall === 0){
+      const isoT = .12 * cfg.open;
+      if (myPct <= isoT && L.canRaise){ rec = { type:'raise', to: to(BB * 3 + BB * limpers) }; why.push('Mână bună: dă raise ca să-i pedepsești pe cei intrați doar cu call.'); }
+      else { rec = { type:'check' }; why.push('Din big blind vezi flop-ul gratis.'); }
+    } else if (G.currentBet <= BB){
+      const base = OPEN[pos] ?? .2;
+      let open = Math.min(1, base * cfg.open) - .03 * limpers;
+      // furt de blinduri: din poziții târzii, când nimeni n-a intrat și blindurile dau des fold
+      const blinds = opps.filter(j => G.pos[j] === 'SB' || G.pos[j] === 'BB');
+      const stealSpot = !limpers && ['CO','BTN','SB','BTN/SB'].includes(pos);
+      const bbName = (opps.find(j => G.pos[j] === 'BB' || G.pos[j] === 'BTN/SB') ?? -1) >= 0 ? P[opps.find(j => G.pos[j] === 'BB' || G.pos[j] === 'BTN/SB')].name : null;
+      if (stealSpot && cfg.steal) open = Math.min(1, open + cfg.steal * learnFactor('steal', bbName, .4) + Math.max(0, avg(blinds, r => r.ftb) - .45));
+      if (myPct <= open && L.canRaise){
+        rec = { type:'raise', to: to(BB * (effBB <= 25 ? 2.2 : pos === 'BTN/SB' ? 2.5 : 3) + BB * limpers) };
+        if (effBB <= 25) why.push('Cu stiva sub 25 BB, deschizi mai mic (2,2 BB) ca să poți renunța ieftin dacă primești all-in.');
+        if (stealSpot && myPct > base){ rec.tag = 'steal'; rec.opp = bbName; why.push(`Furt de blinduri: din ${pos}, cu toți ceilalți ieșiți, un raise câștigă des potul pe loc${TOUR && ANTE ? ', mai ales cu ante în pot' : ''}.`); }
+        else why.push(`Din ${pos} antrenorul ${cfg.label.toLowerCase()} deschide cu cam ${pc(Math.min(1, base * cfg.open))} din mâini, iar mâna ta intră.`);
+        if (limpers) why.push(`Adaugi câte 1 BB pentru fiecare jucător intrat cu call (${limpers}). Cine intră doar cu call are de obicei mâini slabe.`);
+      } else if (pos === 'SB' && limpers > 0 && myPct <= .5){ rec = { type:'call' }; why.push('Din SB completezi ieftin într-un pot cu mai mulți jucători.'); }
+      else { rec = { type:'fold' }; why.push(`Din ${pos} mâna e prea slabă de deschis, chiar și pentru un stil ${cfg.label.toLowerCase()}.`); }
+    } else {
+      const rr = agg >= 0 ? rangeOf(agg).t : .2;
+      if (agg >= 0) why.push(`${P[agg].name} a dat raise. Dă raise preflop în ${pc(rates(P[agg]).pfr)} din mâini, deci range-ul lui e cam top ${pc(rr)}.`);
+      if (G.raises >= 2){
+        const fourT = cfg.light3 >= .5 ? .045 : .03;
+        if (myPct <= fourT && L.canRaise){ rec = { type:'raise', to: to(G.currentBet * 2.4) }; why.push('Contra unui re-raise continui agresiv doar cu mâinile de top.'); }
+        else if (myPct <= .08 * cfg.callMul / .7 && eqR >= need * .9){ rec = { type:'call' }; why.push('Mână destul de bună ca să plătești re-raise-ul, dar nu ca să mai crești.'); }
+        else { rec = { type:'fold' }; why.push('Contra unui re-raise, mâna ta e sub range-ul lui.'); }
+      } else {
+        const threeT = Math.max(.025, rr * cfg.threeMul), callT = Math.min(.55, rr * (pos === 'BB' ? 1.05 : cfg.callMul));
+        const late = ['CO','BTN','SB','BB','BTN/SB'].includes(pos);
+        const lightSpot = cfg.light3 && late && agg >= 0 && rates(P[agg]).pfr >= .2 && suited && myPct > threeT && myPct <= .4;
+        if (effBB <= 25 && L.canRaise && myPct <= Math.max(.05, rr * cfg.threeMul * 1.5)){
+          rec = { type:'raise', to: L.maxTo };
+          why.push(`Re-steal: cu ${effBB.toFixed(1)} BB, un all-in peste raise-ul lui e mai bun decât un 3-bet mic. Îl obligi să decidă pentru toată stiva.`);
+        }
+        else if (myPct <= threeT && L.canRaise){ rec = { type:'raise', to: to(G.currentBet * 3) }; why.push('Mâna ta e mult peste range-ul lui: 3-bet pentru valoare.'); }
+        else if (lightSpot && L.canRaise && Math.random() < Math.min(.95, cfg.light3 * learnFactor('light3', P[agg].name, .45))){
+          rec = { type:'raise', to: to(G.currentBet * 3), tag:'light3', opp:P[agg].name };
+          why.push(`3-bet light: ${P[agg].name} deschide des (${pc(rates(P[agg]).pfr)}) și renunță des la re-raise. O mână suited are și șanse bune când primește call.`);
+        }
+        else if (myPct <= callT && eqR >= need * .9){ rec = { type:'call' }; why.push(pos === 'BB' ? 'Din BB ai deja bani în pot, deci aperi mai larg.' : 'Mâna e destul de bună să joci contra range-ului lui, dar nu să-l crești.'); }
+        else { rec = { type:'fold' }; why.push('Mâna e sub range-ul cu care merită să continui contra acestui raise.'); }
+      }
+    }
+  } else {
+    const fair = 1 / (k + 1), eqH = k <= 1 ? eqR : .5 + (eqR - fair) * .5 / (1 - fair);
+    const draw = hasDraw(me.hole, G.board);
+    const ftbAll = avg(opps, r => r.ftb);
+    const iWasPfAgg = G.pfAgg === 0, iBetLast = G.myAggStreet === G.street - 1;
+    why.push(`Ai ${handName(evalHand(me.hole.concat(G.board))).toLowerCase()}${draw ? ', plus un draw' : ''}.`);
+    if (agg >= 0){ const r = rates(P[agg]); why.push(`${P[agg].name} are AF ${r.af.toFixed(1)}: ${r.af > 2.2 ? 'pariază des, deci bluffează și el des' : 'pariază mai ales cu mâini bune'}.`); }
+    if (L.toCall === 0){
+      if (eqH >= cfg.value && L.canRaise){ rec = { type:'raise', to: to(pt * (cfg.light3 >= .5 && eqH > .8 ? .9 : .66)) }; why.push('Ești probabil în față: pariază pentru valoare.'); }
+      else if (eqH >= cfg.thin && k <= 2 && L.canRaise){ rec = { type:'raise', to: to(pt * .5) }; why.push('Pariu mic pentru valoare și ca să nu le dai cărți gratis.'); }
+      else if (L.canRaise && cfg.cbet && iWasPfAgg && G.street === 1 && k <= 2 && (k === 1 || cfg.cbet >= .8) && Math.random() < Math.min(.97, cfg.cbet * learnFactor('cbet', opp1, .3))){
+        rec = { type:'raise', to: to(pt * .4), tag:'cbet', opp:opp1 };
+        why.push('Continuation bet: tu ai dat raise preflop, deci adversarii te cred puternic. Pe flop ratează de cele mai multe ori și dau fold la un pariu mic.');
+      }
+      else if (L.canRaise && cfg.barrel && iBetLast && k === 1 && (draw || (ftbAll + learnStat('barrel', opp1).rate) / 2 >= cfg.bluffFtb)){
+        rec = { type:'raise', to: to(pt * .6), tag:'barrel', opp:opp1 };
+        why.push(draw ? 'Al doilea pariu cu draw: poate da fold acum, iar dacă plătește mai ai cărți care te fac câștigător.' : `Continui presiunea: ${P[opps[0]].name} dă fold la pariuri în ${pc(ftbAll)} din cazuri.`);
+      }
+      else if (L.canRaise && k <= 2 && draw && G.street < 3 && cfg.semiRaise){ rec = { type:'raise', to: to(pt * .5), tag:'semi', opp:opp1 }; why.push('Semi-bluff: poate da fold acum, iar dacă plătește poți câștiga dacă îți intră draw-ul.'); }
+      else if (L.canRaise && (k === 1 || (k === 2 && cfg.light3 >= .5)) && (ftbAll + learnStat('bluff', opp1).rate) / 2 >= cfg.bluffFtb){ rec = { type:'raise', to: to(pt * .5), tag:'bluff', opp:opp1 }; why.push(`Adversarii dau fold la pariuri în ${pc(ftbAll)} din cazuri: un bluff de ½ pot e profitabil.`); }
+      else { rec = { type:'check' }; why.push('Mâna nu e destul de puternică de pariat și nici nu e un loc bun de bluff. Vezi cartea următoare gratis.'); }
+    } else {
+      if (eqH >= cfg.raise && L.canRaise){ rec = { type:'raise', to: to(G.currentBet + (pt + L.toCall) * .75) }; why.push('Mână foarte puternică: raise pentru valoare.'); }
+      else if (cfg.semiRaise && draw && G.street < 3 && k === 1 && L.canRaise && eqR >= need * .7 && rates(P[agg >= 0 ? agg : opps[0]]).ftb >= .4){
+        rec = { type:'raise', to: to(G.currentBet * 2.8), tag:'semi', opp:opp1 };
+        why.push('Semi-bluff raise: câștigi potul pe loc dacă dă fold, iar dacă plătește ai încă șanse cu draw-ul.');
+      }
+      else if (eqR >= needI){ rec = { type:'call' }; why.push(`Equity ${pc(eqR)} față de ${pc(needI)} cât îți trebuie: call-ul e profitabil pe termen lung.`); }
+      else if (draw && G.street < 3 && eqR >= need * .75 && L.callAmt <= me.stack * .15){ rec = { type:'call' }; why.push('Cote implicite: dacă îți intră draw-ul, câștigi mai mult pe străzile următoare.'); }
+      else { rec = { type:'fold' }; why.push(`Equity ${pc(eqR)} e sub ${pc(need)} cât îți trebuie: plătind aici pierzi bani pe termen lung.`); }
+    }
+  }
+  if (rec.tag){ const ln = learnNote(rec.tag, rec.opp); if (ln) why.push(ln); }
+  if (icmWhy) why.push(icmWhy);
+  why.push(`Equity estimat contra range-urilor lor: ${pc(eqR)}${need ? ` · pot odds: îți trebuie ${pc(need)}` : ''}.`);
+  return { rec, why, eqR };
+}
+function adviceLabel(a){
+  const L = legal(0), r = a.rec;
+  if (r.type === 'fold') return 'Fold';
+  if (r.type === 'check') return 'Check';
+  if (r.type === 'call') return L.toCall ? `Call ${fmt(L.callAmt)}` : 'Check';
+  if (r.to >= L.maxTo) return `All-in ${fmt(L.maxTo)}`;
+  return `${G.currentBet === 0 ? 'Bet' : 'Raise la'} ${fmt(r.to)}`;
+}
+function styleOf(i){ return SET.style === 'mix' ? MIX[(i - 1) % MIX.length] : SET.style; }
+function ensurePlayers(){
+  while (P.length < SET.players) P.push(makePlayer(P.length));
+  while (P.length > SET.players) P.pop();
+  if (G.button >= P.length) G.button = P.length - 1;
+  if (P.length < 3) SET.sitOut = false;
+}
+const G = { button:-1, street:0, toAct:-1, currentBet:0, minRaise:BB, board:[], deck:[], handOver:true, handNum:0,
+  runout:false, reveal:false, thinking:-1, result:null, stackStart:START, pos:{}, winners:[],
+  lastAgg:-1, raises:0, advice:null, autoHand:false };
+const freshStats = () => ({ hands:0, net:0, sd:0, sdWon:0, myHands:0, myNet:0, coachHands:0, coachNet:0 });
+let STATS = freshStats();
+let LOG = [];
+let botTimer = null, runTimer = null, autoTimer = null, eqCache = { key:'', val:0 };
+
+function log(html, cls){ LOG.push({ html, cls: cls || '' }); if (LOG.length > 220) LOG = LOG.slice(-220); }
+function nextIdx(i, pred){ for (let k = 1; k <= P.length; k++){ const j = (i + k) % P.length; if (pred(j)) return j; } return -1; }
+const alive = j => P[j].inHand && !P[j].folded;
+const canAct = j => alive(j) && !P[j].allin;
+const needsAct = j => canAct(j) && (!P[j].acted || P[j].bet < G.currentBet);
+const potTotal = () => P.reduce((s, p) => s + p.com, 0);
+function post(i, amt){ const p = P[i]; const a = Math.max(0, Math.min(amt, p.stack)); p.stack -= a; p.bet += a; p.com += a; if (p.stack === 0) p.allin = true; return a; }
+function legal(i){
+  const p = P[i], toCall = Math.max(0, G.currentBet - p.bet), maxTo = p.bet + p.stack;
+  const others = P.some((q, j) => j !== i && canAct(j));
+  return { toCall, callAmt: Math.min(toCall, p.stack), canCheck: toCall === 0,
+    canRaise: p.stack > toCall && others, maxTo, minTo: Math.min(G.currentBet + G.minRaise, maxTo) };
+}
+function computePositions(){
+  const n = P.filter(p => p.inHand).length, lab = {};
+  if (n === 2){ lab[G.button] = 'BTN/SB'; lab[nextIdx(G.button, j => P[j].inHand)] = 'BB'; return lab; }
+  const names = { 3:['BTN','SB','BB'], 4:['BTN','SB','BB','UTG'], 5:['BTN','SB','BB','UTG','CO'], 6:['BTN','SB','BB','UTG','HJ','CO'] }[n];
+  let k = G.button;
+  for (let t = 0; t < n; t++){ lab[k] = names[t]; k = nextIdx(k, j => P[j].inHand); }
+  return lab;
+}
+
+function startHand(){
+  clearTimeout(botTimer); clearTimeout(runTimer); clearTimeout(autoTimer);
+  if (!TOUR){
+    const before = P.length;
+    ensurePlayers();
+    if (P.length !== before) buildSeats();
+    for (let i = 1; i < P.length; i++) if (P[i].stack <= 0){ P[i].stack = START; P[i].buyins++; log(`${P[i].name} se reîncarcă cu 1.000.`, 'st'); }
+    SB = 5; BB = 10; ANTE = 0;
+  } else {
+    if (TOUR.over) return;
+    if (TOUR.handsAtLevel >= HANDS_PER_LEVEL && TOUR.level < LEVELS.length - 1){
+      TOUR.level++; TOUR.handsAtLevel = 0;
+      const [s, b, a] = LEVELS[TOUR.level];
+      log(`Nivelul ${TOUR.level + 1}: blinduri ${s}/${b}${a ? `, ante ${a}` : ''}.`, 'st');
+    }
+    [SB, BB, ANTE] = LEVELS[TOUR.level];
+    TOUR.handsAtLevel++;
+  }
+  if (P[0].stack <= 0 && !TOUR) return;
+  P.forEach((p, i) => { Object.assign(p, blank()); p.inHand = p.stack > 0 && !p.out && !(i === 0 && SET.sitOut && !TOUR); p.folded = !p.inHand; p.handStart = p.stack; });
+  if (P.filter(p => p.inHand).length < 2){ SET.sitOut = false; if (P[0].stack > 0){ P[0].inHand = true; P[0].folded = false; } }
+  G.handNum++; G.deck = shuffled(); G.board = []; G.street = 0;
+  Object.assign(G, { reveal:false, result:null, handOver:false, runout:false, thinking:-1, stackStart:P[0].stack, winners:[],
+    lastAgg:-1, raises:0, advice:null, autoHand:false, pfAgg:-1, myAggStreet:-1, moves:[], humanFoldWin:false });
+  P.forEach(p => { if (p.inHand) p.st.hands++; });
+  G.button = nextIdx(G.button < 0 ? P.length - 1 : G.button, j => P[j].inHand);
+  const n = P.filter(p => p.inHand).length;
+  const sb = n === 2 ? G.button : nextIdx(G.button, j => P[j].inHand);
+  const bb = nextIdx(sb, j => P[j].inHand);
+  for (let r = 0; r < 2; r++){ let k = sb; for (let t = 0; t < n; t++){ P[k].hole.push(G.deck.pop()); k = nextIdx(k, j => P[j].inHand); } }
+  if (ANTE) P.forEach(p => { if (p.inHand){ const a = Math.min(ANTE, p.stack); p.stack -= a; p.com += a; if (p.stack === 0) p.allin = true; } });
+  post(sb, SB); post(bb, BB);
+  P[sb].last = `SB ${P[sb].bet}`; P[bb].last = `BB ${P[bb].bet}`;
+  G.currentBet = BB; G.minRaise = BB;
+  G.pos = computePositions();
+  log(`Mâna #${G.handNum} · ${n} jucători · buton: ${P[G.button].name}${TOUR ? ` · blinduri ${SB}/${BB}${ANTE ? ` ante ${ANTE}` : ''}` : ''}`, 'hd');
+  if (P[0].inHand) log(`Cărțile tale: ${P[0].hole.map(cardLog).join(' ')} (${G.pos[0]})`);
+  else log('Stai pe margine în mâna asta.');
+  const first = nextIdx(bb, needsAct);
+  if (first < 0) return endRound();
+  G.toAct = first;
+  nextTurn();
+}
+function act(i, type, to){
+  const p = P[i], L = legal(i), who = p.name;
+  const note = (!p.human && SET.openCards && p.lastEq != null) ? ` <span>(equity ${Math.round(p.lastEq * 100)}%)</span>` : '';
+  if (type === 'raise' && !L.canRaise) type = L.toCall ? 'call' : 'check';
+  if (type === 'check' && !L.canCheck) type = 'call';
+  // statistici pentru HUD și pentru range-urile antrenorului
+  { const hx = p.hx, st = p.st;
+    if (G.street === 0){
+      if (type === 'raise'){ if (!hx.vpip){ hx.vpip = true; st.vpip++; } if (!hx.pfr){ hx.pfr = true; st.pfr++; } hx.pfAct = 'raise'; hx.pfRaises = (hx.pfRaises || 0) + 1; }
+      else if (type === 'call' && L.toCall > 0){ if (!hx.vpip){ hx.vpip = true; st.vpip++; } if (hx.pfAct !== 'raise') hx.pfAct = G.currentBet > BB ? 'call' : 'limp'; }
+    } else {
+      if (L.toCall > 0){ st.faced++; if (type === 'fold') st.foldFaced++; }
+      if (type === 'raise'){ st.agg++; hx.postAgg++; } else if (type === 'call' && L.toCall > 0){ st.calls++; hx.postCall++; }
+    }
+    if (type === 'raise'){ G.lastAgg = i; G.raises++; if (i === 0) G.myAggStreet = G.street; }
+  }
+  if (p.human) G.advice = null;
+  if (type === 'fold'){
+    p.folded = true; p.last = 'Fold'; p.acted = true; log(`${who}: fold${note}`);
+    const left = P.map((_, j) => j).filter(alive);
+    if (left.length === 1) return winByFold(left[0]);
+    return proceed(i);
+  }
+  if (type === 'check' || (type === 'call' && L.toCall === 0)){
+    p.last = 'Check'; log(`${who}: check${note}`);
+  } else if (type === 'call'){
+    post(i, L.callAmt);
+    p.last = p.allin ? `All-in ${p.bet}` : `Call ${L.callAmt}`;
+    log(`${who}: call ${L.callAmt}${p.allin ? ' (all-in)' : ''}${note}`);
+  } else {
+    let t = Math.round(Number(to) || L.minTo);
+    t = Math.max(L.minTo, Math.min(L.maxTo, t));
+    const isBet = G.currentBet === 0;
+    post(i, t - p.bet);
+    const inc = t - G.currentBet; if (inc >= G.minRaise) G.minRaise = inc;
+    G.currentBet = Math.max(G.currentBet, t);
+    P.forEach((q, j) => { if (j !== i) q.acted = false; });
+    p.last = p.allin ? `All-in ${t}` : (isBet ? `Bet ${t}` : `Raise la ${t}`);
+    log(`${who}: ${p.allin ? 'all-in ' + t : (isBet ? 'bet ' + t : 'raise la ' + t)}${note}`);
+  }
+  p.acted = true;
+  proceed(i);
+}
+function proceed(i){
+  const n = nextIdx(i, needsAct);
+  if (n < 0) return endRound();
+  G.toAct = n; nextTurn();
+}
+function endRound(){
+  // returnează partea neplătită a celui mai mare pariu
+  let top = -1, topCom = -1, second = 0;
+  P.forEach((p, j) => { if (!p.inHand) return; if (p.com > topCom){ second = Math.max(second, topCom); topCom = p.com; top = j; } else second = Math.max(second, p.com); });
+  if (top >= 0 && topCom > second && !P[top].folded){
+    const d = topCom - second; const p = P[top];
+    p.stack += d; p.com -= d; p.bet = Math.max(0, p.bet - d); if (p.stack > 0) p.allin = false;
+    log(`${p.human ? 'Primești' : p.name + ' primește'} înapoi ${d} (neplătit)`);
+  }
+  P.forEach(p => { p.bet = 0; });
+  if (G.street === 0) G.pfAgg = G.lastAgg;
+  G.currentBet = 0; G.minRaise = BB; G.lastAgg = -1; G.raises = 0;
+  if (G.street === 3) return showdown();
+  const live = P.map((_, j) => j).filter(alive);
+  if (live.filter(canAct).length <= 1){
+    G.reveal = true; G.runout = true; G.toAct = -1;
+    log(`All-in. Cărțile pe masă: ${live.map(j => `${P[j].name} ${P[j].hole.map(cardLog).join(' ')}`).join(' · ')}`);
+    render(); runTimer = setTimeout(runout, SET.speed === 'rapid' ? 500 : 900); return;
+  }
+  dealStreet();
+  P.forEach(p => { if (p.inHand && !p.folded){ p.acted = false; if (!p.allin) p.last = ''; } });
+  G.toAct = nextIdx(G.button, canAct);
+  nextTurn();
+}
+function dealStreet(){
+  G.street++;
+  const n = G.street === 1 ? 3 : 1, cards = [];
+  G.deck.pop(); // carte arsă
+  for (let i = 0; i < n; i++){ const c = G.deck.pop(); G.board.push(c); cards.push(c); }
+  log(`${STREETS[G.street]}: ${cards.map(cardLog).join(' ')} · pot ${potTotal()}`, 'st');
+}
+function runout(){
+  if (G.street >= 3) return showdown();
+  dealStreet(); render(); runTimer = setTimeout(runout, SET.speed === 'rapid' ? 500 : 900);
+}
+function showdown(){
+  G.reveal = true; G.runout = false;
+  const cont = P.map((_, j) => j).filter(alive);
+  const sc = {}, nm = {};
+  cont.forEach(j => { sc[j] = evalHand(P[j].hole.concat(G.board)); nm[j] = handName(sc[j]); });
+  log(`Showdown: ${cont.map(j => `${P[j].name} ${P[j].hole.map(cardLog).join(' ')} (${nm[j]})`).join(' · ')}`);
+  const order = []; { let k = G.button; for (let t = 0; t < P.length; t++){ k = (k + 1) % P.length; order.push(k); } }
+  const levels = [...new Set(cont.map(j => P[j].com))].sort((a, b) => a - b);
+  const won = new Array(P.length).fill(0); const pots = [];
+  let prev = 0;
+  levels.forEach((lv, idx) => {
+    let slice = 0;
+    P.forEach(p => { if (p.inHand) slice += Math.min(p.com, lv) - Math.min(p.com, prev); });
+    if (idx === levels.length - 1){ const total = potTotal(); const counted = P.reduce((s, p) => s + (p.inHand ? Math.min(p.com, lv) : 0), 0); slice += total - counted; }
+    const elig = cont.filter(j => P[j].com >= lv);
+    if (slice > 0){
+      const best = Math.max(...elig.map(j => sc[j]));
+      const ws = order.filter(j => elig.includes(j) && sc[j] === best);
+      const share = Math.floor(slice / ws.length); let odd = slice - share * ws.length;
+      ws.forEach(j => { won[j] += share; });
+      for (let k = 0; odd > 0; k++, odd--) won[ws[k % ws.length]]++;
+      pots.push({ amt:slice, ws });
+    }
+    prev = lv;
+  });
+  won.forEach((a, j) => { P[j].stack += a; });
+  pots.forEach((pt, k) => {
+    const label = pots.length === 1 ? 'Potul' : (k === 0 ? 'Potul principal' : `Pot secundar ${k}`);
+    log(`${label} (${pt.amt}): ${pt.ws.map(j => P[j].name).join(' și ')}${pt.ws.length > 1 ? ' împart' : ''} cu ${nm[pt.ws[0]]}`, pt.ws.includes(0) ? 'win' : (cont.includes(0) ? 'lose' : ''));
+  });
+  const main = pots[0];
+  G.winners = P.map((_, j) => j).filter(j => won[j] > 0);
+  let title;
+  if (won[0] > 0) title = main.ws.length > 1 && main.ws.includes(0) && pots.length === 1 ? `Împarți potul · +${fmt(won[0])}` : `Câștigi ${fmt(won[0])}`;
+  else if (main.ws.length > 1) title = `${main.ws.map(j => P[j].name).join(' și ')} împart potul`;
+  else title = `${P[main.ws[0]].name} câștigă ${fmt(won[main.ws[0]])}`;
+  const detail = cont.map(j => `${P[j].name}: ${nm[j]}`).join(' · ') + (pots.length > 1 ? ` · ${pots.length} poturi (side pot)` : '');
+  finish(won[0] > 0 ? 'win' : (cont.includes(0) ? 'lose' : ''), title, detail, cont.includes(0), won[0] > 0);
+}
+function winByFold(w){
+  const amt = potTotal(); P[w].stack += amt; G.winners = [w]; G.humanFoldWin = w === 0;
+  log(`${P[w].name} ${P[w].human ? 'iei' : 'ia'} potul de ${amt}.`, w === 0 ? 'win' : (P[0].inHand ? 'lose' : ''));
+  finish(w === 0 ? 'win' : (P[0].inHand ? 'lose' : ''), w === 0 ? `Câștigi ${fmt(amt)}` : `${P[w].name} ia potul de ${fmt(amt)}`,
+    w === 0 ? 'Toți ceilalți au dat fold.' : (P[0].folded && P[0].inHand ? 'Ai dat fold în mâna asta.' : 'Toți ceilalți au dat fold.'), false, false);
+}
+function finish(kind, title, detail, humanSd, humanWonSd){
+  G.handOver = true; G.runout = false; G.thinking = -1; G.toAct = -1;
+  clearTimeout(botTimer); clearTimeout(runTimer);
+  if (P[0].inHand){
+    const delta = P[0].stack - G.stackStart;
+    STATS.hands++; STATS.net += delta;
+    if (G.autoHand){ STATS.coachHands++; STATS.coachNet += delta; } else { STATS.myHands++; STATS.myNet += delta; }
+    if (humanSd){ STATS.sd++; if (humanWonSd) STATS.sdWon++; }
+  }
+  // antrenorul învață: mutarea a reușit dacă mâna s-a câștigat fără showdown
+  (G.moves || []).forEach(m => learnRecord(m.tag, m.opp, G.humanFoldWin));
+  if (!TOUR){
+    const busted = P.filter((p, i) => i > 0 && p.stack === 0).map(p => p.name);
+    if (busted.length) detail += ` ${busted.join(', ')} ${busted.length > 1 ? 'au' : 'a'} rămas fără jetoane și se reîncarcă.`;
+    if (P[0].stack === 0) detail += ' Ai rămas fără jetoane.';
+  } else {
+    // eliminări: cine avea mai multe jetoane la începutul mâinii ia locul mai bun
+    const out = P.filter(p => !p.out && p.stack === 0).sort((a, b) => a.handStart - b.handStart);
+    let left = P.filter(p => !p.out).length;
+    out.forEach(p => { p.out = true; p.place = left--; log(`${p.name} e eliminat pe locul ${p.place}.`, p.human ? 'lose' : 'st'); });
+    if (out.length) detail += ` Eliminați: ${out.map(p => `${p.name} (locul ${p.place})`).join(', ')}.`;
+    const still = P.filter(p => !p.out);
+    if (P[0].out || still.length === 1){
+      if (still.length === 1){ still[0].place = 1; still[0].out = true; }
+      TOUR.over = true;
+      const place = P[0].place, paid = payouts(TOUR.startN);
+      TSTATS.played++; TSTATS.placeSum += place; if (place <= paid.length) TSTATS.itm++; if (place === 1) TSTATS.wins++; saveTStats();
+      if (G.autoHand || SET.autoCoach) STATS.coachTours = (STATS.coachTours || 0) + 1;
+      kind = place <= paid.length ? 'win' : 'lose';
+      title = place === 1 ? 'Ai câștigat turneul!' : `Ai terminat pe locul ${place} din ${TOUR.startN}`;
+      detail = place <= paid.length ? `Ești pe bani: iei ${paid[place - 1]}% din premii.` : `Premiile se dau pentru primele ${paid.length} locuri.`;
+      log(title, kind);
+    }
+  }
+  G.result = { kind, title, detail };
+  render();
+  if ((SET.sitOut && !P[0].inHand) || SET.autoCoach) autoTimer = setTimeout(nextHand, SET.speed === 'rapid' ? 1300 : 2600);
+}
+
+/* ---------- boții ---------- */
+function botDecide(i){
+  const p = P[i], st = STYLES[styleOf(i)], L = legal(i), pre = G.street === 0;
+  const opps = P.filter((q, j) => j !== i && alive(j)).length;
+  const eq = equity(p.hole, G.board, opps, pre ? 300 : 450);
+  const fair = 1 / (opps + 1);
+  const eqH = opps <= 1 ? eq : .5 + (eq - fair) * .5 / (1 - fair); // putere relativă, pe scara heads-up
+  p.lastEq = eq;
+  const pt = potTotal(), r = Math.random();
+  const behind = P.filter((q, j) => j !== i && canAct(j) && !q.acted).length;
+  const size = (bluff) => {
+    let to;
+    if (pre){
+      if (G.currentBet <= BB){ const limpers = P.filter((q, j) => j !== i && alive(j) && q.acted && q.bet >= BB).length; to = BB * (2.5 + Math.random() * .5) + BB * limpers; }
+      else to = G.currentBet * (2.7 + Math.random() * .6);
+    } else if (G.currentBet === 0) to = pt * [.5, .66, .75, 1][Math.floor(Math.random() * 4)];
+    else to = G.currentBet + (pt + L.toCall) * (.6 + Math.random() * .3);
+    if (!bluff && !pre && ((eqH > .9 && Math.random() < .3) || (p.stack < pt * 1.3 && eqH > st.bet))) to = L.maxTo;
+    to = Math.round(to / 5) * 5;
+    to = Math.max(L.minTo, Math.min(L.maxTo, to));
+    if (to >= L.maxTo * .8) to = L.maxTo;
+    return { type:'raise', to };
+  };
+  const potOdds = L.callAmt / (pt + L.callAmt);
+  const betFrac = L.toCall / Math.max(BB, pt - L.toCall);
+  // stivă mică: push/fold
+  const effBB = Math.min(p.stack + p.bet, Math.max(0, ...P.filter((q, j) => j !== i && alive(j)).map(q => q.stack + q.bet))) / BB;
+  if (pre && effBB <= 10){
+    const mult = st === STYLES.agresiv ? 1.25 : st === STYLES.prudent ? .75 : 1;
+    const pp = pushPct(effBB, behind) * mult, mp = pctOf(p.hole);
+    if (G.currentBet <= BB){
+      if (L.toCall === 0) return (L.canRaise && mp <= pp) ? { type:'raise', to:L.maxTo } : { type:'check' };
+      if (L.canRaise && mp <= pp) return { type:'raise', to:L.maxTo };
+      return (L.toCall < BB && mp <= pp * 1.4) ? { type:'call' } : { type:'fold' };
+    }
+    if (eq - st.respect * .5 >= potOdds + st.margin + .02) return (L.canRaise && mp <= pp * .4) ? { type:'raise', to:L.maxTo } : { type:'call' };
+    return { type:'fold' };
+  }
+  if (pre){
+    const openT = st.pfRaise + .005 * behind;
+    if (L.toCall === 0) return (L.canRaise && eqH >= openT && r < .8) ? size(false) : { type:'check' };
+    if (G.currentBet <= BB){
+      if (L.canRaise && eqH >= openT) return size(false);
+      const limpT = openT - (L.toCall < BB ? .12 : .07);
+      if (eqH >= limpT && r < .75) return { type:'call' };
+      if (L.canRaise && behind <= 2 && r < st.bluff * .5) return size(true);
+      return { type:'fold' };
+    }
+    if (L.canRaise && eqH >= openT + .15 && r < .8) return size(false);
+    const eqAdj = eq - st.respect * Math.min(betFrac, 2) * .6;
+    if (eqAdj >= potOdds + st.margin) return { type:'call' };
+    if (L.canRaise && opps <= 2 && r < st.bluff * .25) return size(true);
+    return { type:'fold' };
+  }
+  if (L.toCall === 0){
+    if (!L.canRaise) return { type:'check' };
+    if (eqH >= st.raise) return r < st.slow ? { type:'check' } : size(false);
+    if (eqH >= st.bet) return r < .7 ? size(false) : { type:'check' };
+    if (r < st.bluff / opps) return size(true);
+    return { type:'check' };
+  }
+  const eqAdj = eq - st.respect * Math.min(betFrac, 2);
+  if (L.canRaise && eqH >= st.raise && r < .7) return size(false);
+  if (eqAdj >= potOdds + st.margin) return { type:'call' };
+  if (L.canRaise && r < st.bluff * .4 / opps && L.toCall <= pt * .7) return size(true);
+  return { type:'fold' };
+}
+function nextTurn(){
+  if (G.handOver) return;
+  const i = G.toAct;
+  if (P[i].human){
+    G.thinking = -1;
+    if (SET.coach || SET.autoCoach) G.advice = coachAdvice();
+    prepHuman(); render(); scheduleAuto(); return;
+  }
+  G.thinking = i; render();
+  const hand = G.handNum;
+  let base = SET.speed === 'rapid' ? 220 : 600;
+  if (!P[0].inHand || P[0].folded) base *= .6;
+  botTimer = setTimeout(() => {
+    if (G.handOver || G.handNum !== hand || G.toAct !== i) return;
+    const d = botDecide(i); G.thinking = -1; act(i, d.type, d.to);
+  }, base + Math.random() * base);
+}
+
+/* ---------- interfața ---------- */
+const el = {
+  table:$('#table'), pot:$('#pot'), board:$('#board'), info:$('#info'), actionArea:$('#actionArea'), waitArea:$('#waitArea'),
+  resultArea:$('#resultArea'), resTitle:$('#resTitle'), resDetail:$('#resDetail'), btnNext:$('#btnNext'),
+  fold:$('#btnFold'), call:$('#btnCall'), raise:$('#btnRaise'), range:$('#raiseRange'), amt:$('#raiseAmt'),
+  presets:$('#presets'), stats:$('#stats'), log:$('#log'), leader:$('#leader'), tableNote:$('#tableNote'),
+  coach:$('#coach'), coachAct:$('#coachAct'), coachWhy:$('#coachWhy'), coachApply:$('#coachApply')
+};
+let SEATS = [];
+function buildSeats(){
+  el.table.querySelectorAll('.seat,.betchip').forEach(n => n.remove());
+  SEATS = P.map((p, i) => {
+    const seat = document.createElement('div');
+    seat.className = 'seat' + (p.human ? ' me' : '');
+    seat.innerHTML = `<div class="tag"></div><div class="cards"></div>
+      <div class="plate"><div class="pl-top"><span class="dealer" hidden title="Buton (dealer)">D</span><span class="nm"></span><span class="pos"></span></div>
+      <div class="stack"></div>${p.human ? '' : '<div class="sty"></div><div class="hud" title="VPIP / PFR · AF (agresivitate) · mâini observate"></div>'}</div>`;
+    const bet = document.createElement('div'); bet.className = 'betchip';
+    el.table.appendChild(seat); el.table.appendChild(bet);
+    return { seat, bet, tag:seat.querySelector('.tag'), cards:seat.querySelector('.cards'), dealer:seat.querySelector('.dealer'),
+      nm:seat.querySelector('.nm'), pos:seat.querySelector('.pos'), stack:seat.querySelector('.stack'), sty:seat.querySelector('.sty'),
+      hud:seat.querySelector('.hud') };
+  });
+  layoutSeats();
+}
+function layoutSeats(){
+  const w = el.table.clientWidth, narrow = w < 560;
+  const k = P.length - 1, rx = narrow ? 37 : 42, ry = 38, cx = 50, cy = 50;
+  SEATS.forEach((s, i) => {
+    let x, y, bx, by;
+    if (i === 0){ x = 50; y = narrow ? 85 : 86; bx = narrow ? 24 : 34; by = narrow ? 82 : 80; }
+    else {
+      const a = (k === 1 ? 270 : 190 + (i - 1) * (160 / (k - 1))) * Math.PI / 180;
+      x = cx + rx * Math.cos(a); y = cy + ry * Math.sin(a);
+      bx = x + (50 - x) * .42; by = y + (50 - y) * .42;
+      if (k === 1){ by = 32; }
+    }
+    s.seat.style.setProperty('--x', x + '%'); s.seat.style.setProperty('--y', y + '%');
+    s.bet.style.setProperty('--x', bx + '%'); s.bet.style.setProperty('--y', by + '%');
+  });
+}
+function cardHTML(c, mode){
+  if (mode === 'slot') return '<div class="card slot" aria-hidden="true"></div>';
+  if (mode === 'back') return '<div class="card back" role="img" aria-label="carte cu fața în jos"></div>';
+  const s = c & 3;
+  return `<div class="card s-${SUITCLS[s]}${mode === 'dim' ? ' dim' : ''}" role="img" aria-label="${RDISP[c >> 2]} de ${SUITNAME[s]}"><span class="r">${RDISP[c >> 2]}</span><span class="s">${SUITSYM[s]}</span></div>`;
+}
+function setHTML(node, html){ if (node.dataset.k !== html){ node.innerHTML = html; node.dataset.k = html; } }
+function setRaiseValue(v){
+  const L = legal(0);
+  v = Math.max(L.minTo, Math.min(L.maxTo, Math.round(v)));
+  el.range.value = v; el.amt.value = v; updateRaiseLabel();
+}
+function presetValue(p){
+  const L = legal(0);
+  if (p === 'min') return L.minTo;
+  if (p === 'all') return L.maxTo;
+  return Math.round((G.currentBet + parseFloat(p) * (potTotal() + L.toCall)) / 5) * 5;
+}
+function prepHuman(){
+  const L = legal(0);
+  el.range.min = L.minTo; el.range.max = L.maxTo; el.range.step = 5;
+  el.amt.min = L.minTo; el.amt.max = L.maxTo; el.amt.step = 5;
+  setRaiseValue(G.street === 0 && G.currentBet <= BB ? BB * 3 : presetValue(G.currentBet === 0 ? '0.5' : 'min'));
+}
+function updateRaiseLabel(){
+  const L = legal(0), v = Math.min(Number(el.amt.value) || L.minTo, L.maxTo);
+  el.raise.innerHTML = `${v >= L.maxTo ? 'All-in' : (G.currentBet === 0 ? 'Bet' : 'Raise la')} ${fmt(v)} <kbd>R</kbd>`;
+}
+/* ---------- legătura cu Jarvis (doar când jocul rulează din Masa de Poker.exe, pe 127.0.0.1) ---------- */
+const LOCAL_HOST = location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)(:|$)/.test(location.host);
+let bridge = null, jarvisPeers = 0;
+function jarvisState(){
+  const h = G.handNum > 0 ? {
+    street:G.street, board:G.board, currentBet:G.currentBet, minRaise:G.minRaise, toAct:G.toAct, over:G.handOver, runout:G.runout,
+    lastAgg:G.lastAgg, raises:G.raises, pfAgg:G.pfAgg ?? -1, pos:G.pos, winners:G.winners, bb:BB, ante:ANTE,
+    result: G.result ? { title:G.result.title, detail:G.result.detail, byFold:!!G.humanFoldWin, won:[P[0].stack - G.stackStart > 0 ? 1 : 0] } : null
+  } : null;
+  return { t:'state', code:'LOCAL', you:0, host:true, running:true, waiting:false, handNum:G.handNum, button:G.button, now:Date.now(),
+    settings:{ coachAllowed:true, mode:SET.mode, stack:START, turnTime:30 }, sb:SB, bb:BB, ante:ANTE,
+    tour: TOUR ? { level:TOUR.level, handsAtLevel:TOUR.handsAtLevel, startN:TOUR.startN, over:TOUR.over, hpl:HANDS_PER_LEVEL } : null, h,
+    seats: P.map((p, i) => ({ name:p.name, bot:!p.human, style:p.human ? null : styleOf(i), stack:p.stack, buyins:p.buyins, bet:p.bet, com:p.com,
+      out:!!p.out, place:p.place || 0, folded:p.folded, allin:p.allin, inHand:p.inHand, last:p.last, connected:true, coach:false, sitOut:false,
+      st:p.st, hx:p.hx, aggStreet: i === 0 ? (G.myAggStreet ?? -1) : -1, host:i === 0, jarvis:i === 0 && jarvisPeers > 0,
+      hole: i === 0 || (G.reveal && p.inHand && !p.folded) ? p.hole : (h && !G.handOver && p.inHand && !p.folded ? [-1, -1] : []) })),
+    legal: h && !G.handOver && !G.runout && G.toAct === 0 && P[0].inHand ? legal(0) : null, log:[], chat:[] };
+}
+function sendBridge(){ if (bridge && bridge.readyState === 1){ try { bridge.send(JSON.stringify(jarvisState())); } catch (e) {} } }
+function connectBridge(){
+  if (!LOCAL_HOST) return;
+  bridge = new WebSocket('ws://' + location.host + '/ws?role=game');
+  bridge.onopen = sendBridge;
+  bridge.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch (er) { return; }
+    if (m.t === 'hello') sendBridge();
+    if (m.t === 'peers'){ jarvisPeers = m.jarvis || 0; const c = $('#jvChip'); if (c) c.hidden = !jarvisPeers; }
+  };
+  bridge.onclose = () => { jarvisPeers = 0; const c = $('#jvChip'); if (c) c.hidden = true; setTimeout(connectBridge, 2000); };
+}
+
+function render(){
+  sendBridge();
+  const started = G.handNum > 0;
+  P.forEach((p, i) => {
+    const s = SEATS[i]; if (!s) return;
+    s.nm.textContent = p.name;
+    s.pos.textContent = p.inHand ? (G.pos[i] || '') : '';
+    s.dealer.hidden = !(started && G.button === i);
+    s.stack.textContent = fmt(p.stack);
+    if (s.sty) s.sty.textContent = STYLES[styleOf(i)].label;
+    if (s.hud){
+      const st = p.st;
+      s.hud.hidden = !SET.hud;
+      s.hud.textContent = st.hands ? `${Math.round(st.vpip / st.hands * 100)}/${Math.round(st.pfr / st.hands * 100)} · AF ${(st.agg / Math.max(1, st.calls)).toFixed(1)} · ${st.hands}` : 'fără date încă';
+    }
+    const thinking = G.thinking === i;
+    s.tag.innerHTML = thinking ? '<span class="thinking">se gândește</span>' : (!p.inHand && started ? (p.out ? `eliminat · locul ${p.place}` : 'pe margine') : p.last);
+    s.tag.className = 'tag' + (/^Fold/.test(p.last) ? ' fold' : /^(Bet|Raise|All)/.test(p.last) ? ' aggr' : '');
+    s.seat.classList.toggle('out', started && (!p.inHand || p.folded));
+    s.seat.classList.toggle('active', !G.handOver && !G.runout && G.toAct === i);
+    s.seat.classList.toggle('winner', G.handOver && G.winners.includes(i));
+    setHTML(s.bet, p.bet > 0 ? `<span class="chips">${fmt(p.bet)}</span>` : '');
+    let cards = '';
+    if (started && p.inHand){
+      if (p.human || SET.openCards || (G.reveal && !p.folded)) cards = p.hole.map(c => cardHTML(c, p.folded ? 'dim' : 'face')).join('');
+      else if (!p.folded) cards = cardHTML(0, 'back') + cardHTML(0, 'back');
+    }
+    setHTML(s.cards, cards);
+  });
+  el.pot.innerHTML = `Pot <b>${G.handOver ? '—' : fmt(potTotal())}</b>`;
+  let b = ''; for (let i = 0; i < 5; i++) b += i < G.board.length ? cardHTML(G.board[i], 'face') : cardHTML(0, 'slot');
+  setHTML(el.board, b);
+
+  // informații pentru tine
+  const me = P[0], chips = [];
+  const myTurn = !G.handOver && !G.runout && G.toAct === 0;
+  if (started && me.inHand){
+    chips.push(`<span class="chip-i">${G.board.length >= 3 ? 'Ai: <b>' + handName(evalHand(me.hole.concat(G.board))) + '</b>' : 'Mâna ta: <b>' + startLabel(me.hole) + '</b>'}</span>`);
+    if (!G.handOver) chips.push(`<span class="chip-i muted">${STREETS[G.street]} · poziția ta: ${G.pos[0]} · stiva: ${((me.stack + me.bet) / BB).toFixed(1)} BB</span>`);
+    if (SET.showEq && !G.handOver && !me.folded){
+      const opps = P.filter((q, j) => j !== 0 && alive(j)).length;
+      const key = G.handNum + '-' + G.board.length + '-' + opps;
+      if (eqCache.key !== key) eqCache = { key, val: equity(me.hole, G.board, opps, opps > 2 ? 1200 : 1800) };
+      const eq = eqCache.val;
+      chips.push(`<span class="chip-i" title="Șansa să câștigi contra unor mâini aleatorii, dacă se dau toate cărțile">Equity: <b>${Math.round(eq * 100)}%</b> contra ${opps} ${opps === 1 ? 'adversar' : 'adversari'}</span>`);
+      const L = legal(0);
+      if (myTurn && L.toCall > 0){
+        const need = L.callAmt / (potTotal() + L.callAmt);
+        chips.push(`<span class="chip-i ${eq >= need ? 'good' : 'bad'}" title="Procentul minim de equity ca un call să fie profitabil pe termen lung">Pot odds: îți trebuie <b>${Math.round(need * 100)}%</b> ca să plătești ${fmt(L.callAmt)}</span>`);
+      }
+    }
+  } else if (started && !me.inHand){
+    chips.push('<span class="chip-i muted">Stai pe margine. Boții joacă între ei.</span>');
+  }
+  el.info.innerHTML = chips.join('');
+
+  // zona de acțiuni
+  el.resultArea.hidden = !(G.handOver && G.result);
+  el.actionArea.hidden = true; el.waitArea.hidden = true;
+  if (G.handOver && G.result){
+    el.resTitle.textContent = G.result.title;
+    el.resTitle.className = 'res-title' + (G.result.kind ? ' ' + G.result.kind : '');
+    el.resDetail.textContent = G.result.detail;
+    el.btnNext.innerHTML = TOUR && TOUR.over ? 'Turneu nou <kbd>Enter</kbd>'
+      : P[0].stack === 0 ? 'Reîncarcă 1.000 și continuă <kbd>Enter</kbd>'
+      : (SET.sitOut ? 'Mâna următoare (pornește singură) <kbd>Enter</kbd>' : 'Mâna următoare <kbd>Enter</kbd>');
+  } else if (!myTurn){
+    el.waitArea.hidden = false;
+    el.waitArea.textContent = G.runout ? 'All-in. Se dau restul cărților…'
+      : (G.thinking >= 0 ? `${P[G.thinking].name} se gândește…` : '…') + (me.inHand && me.folded ? ' Ai dat fold, privești restul mâinii.' : '');
+  } else {
+    el.actionArea.hidden = false;
+    const L = legal(0);
+    el.fold.disabled = L.canCheck;
+    el.call.innerHTML = L.canCheck ? 'Check <kbd>C</kbd>' : `${L.callAmt >= me.stack ? 'Call all-in' : 'Call'} ${fmt(L.callAmt)} <kbd>C</kbd>`;
+    el.raise.disabled = !L.canRaise;
+    el.range.disabled = el.amt.disabled = !L.canRaise || L.minTo >= L.maxTo;
+    for (const btn of el.presets.querySelectorAll('button')) btn.disabled = !L.canRaise;
+    updateRaiseLabel();
+  }
+  const showCoach = myTurn && (SET.coach || SET.autoCoach) && G.advice;
+  el.coach.hidden = !showCoach;
+  if (showCoach){
+    el.coachAct.textContent = adviceLabel(G.advice);
+    el.coachWhy.innerHTML = G.advice.why.map(w => `<li>${w}</li>`).join('');
+    el.coachApply.innerHTML = SET.autoCoach ? 'Joacă singur…' : 'Aplică <kbd>A</kbd>';
+    el.coachApply.disabled = SET.autoCoach;
+  }
+
+  // clasament
+  const cls = v => v > 0 ? 'pos-v' : v < 0 ? 'neg-v' : '';
+  const sign = v => (v > 0 ? '+' : '') + fmt(v);
+  const nameCell = r => `${r.p.name}${r.p.human ? '' : ` <small>${STYLES[styleOf(r.i)].label}</small>`}`;
+  if (TOUR){
+    const rows = P.map((p, i) => ({ p, i, st: G.handOver ? p.stack : p.stack + p.com }))
+      .sort((a, b) => (a.p.out ? 1 : 0) - (b.p.out ? 1 : 0) || (a.p.out ? a.p.place - b.p.place : b.st - a.st));
+    el.leader.innerHTML = '<thead><tr><th>Jucător</th><th class="n">Stivă</th><th class="n">BB</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td>${nameCell(r)}</td><td class="n">${r.p.out ? (r.p.place === 1 ? 'câștigător' : `locul ${r.p.place}`) : fmt(r.st)}</td><td class="n">${r.p.out ? '—' : (r.st / BB).toFixed(1)}</td></tr>`).join('') + '</tbody>';
+  } else {
+    const rows = P.map((p, i) => ({ p, i, net: (G.handOver ? p.stack : p.stack + p.com) - START * p.buyins })).sort((a, b) => b.net - a.net);
+    el.leader.innerHTML = '<thead><tr><th>Jucător</th><th class="n">Stivă</th><th class="n">Rezultat</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td>${nameCell(r)}${r.p.buyins > 1 ? ` <small>· ${r.p.buyins}× buy-in</small>` : ''}</td><td class="n">${fmt(r.p.stack)}</td><td class="n ${cls(r.net)}">${sign(r.net)}</td></tr>`).join('') + '</tbody>';
+  }
+
+  // turneul
+  $('#tourPanel').hidden = !TOUR;
+  if (TOUR){
+    const live = P.filter(p => !p.out), pay = payouts(TOUR.startN);
+    const eqs = icm(P.map(p => p.out ? 0 : (G.handOver ? p.stack : p.stack + p.com)), pay);
+    const myStack = G.handOver ? P[0].stack : P[0].stack + P[0].com;
+    const orbit = SB + BB + ANTE * live.length;
+    const nxt = LEVELS[Math.min(TOUR.level + 1, LEVELS.length - 1)];
+    $('#tourStats').innerHTML = `
+      <div><dt>Nivel</dt><dd>${TOUR.level + 1}</dd></div>
+      <div><dt>Blinduri · ante</dt><dd>${SB}/${BB}${ANTE ? ' · ' + ANTE : ''}</dd></div>
+      <div><dt>Crește în</dt><dd>${Math.max(0, HANDS_PER_LEVEL - TOUR.handsAtLevel)} mâini</dd></div>
+      <div><dt>Jucători rămași</dt><dd>${live.length} din ${TOUR.startN}</dd></div>
+      <div><dt>Stiva ta</dt><dd>${P[0].out ? '—' : (myStack / BB).toFixed(1) + ' BB'}</dd></div>
+      <div><dt>M (runde de blinduri)</dt><dd>${P[0].out ? '—' : (myStack / orbit).toFixed(1)}</dd></div>
+      <div><dt>Valoarea ta (ICM)</dt><dd>${P[0].out ? '—' : eqs[0].toFixed(1) + '% din premii'}</dd></div>
+      <div><dt>Premii</dt><dd>${pay.map((v, k) => `${k + 1}: ${v}%`).join(' · ')}</dd></div>`;
+    const paidN = pay.length;
+    $('#tourNote').textContent = TOUR.over ? 'Turneul s-a terminat. Apasă pe butonul de sub masă ca să începi altul.'
+      : live.length === paidN + 1 ? 'Bubble: încă o eliminare și toți cei rămași iau premii. Stivele mici trebuie să joace strâns, liderul poate presa.'
+      : live.length <= paidN ? 'Toți cei rămași sunt pe bani. Acum se joacă pentru locurile de sus.'
+      : `Următorul nivel: ${nxt[0]}/${nxt[1]}${nxt[2] ? ` cu ante ${nxt[2]}` : ''}. Sub 12 BB, antrenorul trece pe all-in sau fold.`;
+  }
+
+  // ce a învățat antrenorul
+  const lr = Object.keys(MOVES).map(tag => ({ tag, s: LEARN.g[tag] || { t:0, w:0 } }));
+  $('#learnTbl').innerHTML = '<thead><tr><th>Mutare</th><th class="n">Încercări</th><th class="n">Reușite</th></tr></thead><tbody>' +
+    lr.map(r => `<tr><td>${MOVES[r.tag]}</td><td class="n">${r.s.t}</td><td class="n">${r.s.t ? Math.round(r.s.w / r.s.t * 100) + '%' : '—'}</td></tr>`).join('') + '</tbody>';
+
+  // statistici
+  const bbNet = STATS.net / BB, per100 = STATS.hands ? bbNet / STATS.hands * 100 : 0;
+  const s1 = v => (v > 0 ? '+' : '') + (Math.round(v * 10) / 10).toLocaleString('ro-RO');
+  el.stats.innerHTML = `
+    <div><dt>Mâini jucate</dt><dd>${STATS.hands}</dd></div>
+    <div><dt>Rezultat</dt><dd class="${cls(STATS.net)}">${sign(STATS.net)}</dd></div>
+    <div><dt>În big blinds</dt><dd class="${cls(bbNet)}">${s1(bbNet)} bb</dd></div>
+    <div><dt>bb / 100 mâini</dt><dd class="${cls(per100)}">${STATS.hands ? s1(per100) : '—'}</dd></div>
+    <div><dt>Showdown câștigate</dt><dd>${STATS.sdWon} din ${STATS.sd}</dd></div>
+    <div><dt>Mâini la masă</dt><dd>${G.handNum}</dd></div>
+    <div><dt>Tu singur · bb/100</dt><dd class="${cls(STATS.myNet)}">${STATS.myHands ? s1(STATS.myNet / BB / STATS.myHands * 100) : '—'} <small>(${STATS.myHands})</small></dd></div>
+    <div><dt>Antrenorul · bb/100</dt><dd class="${cls(STATS.coachNet)}">${STATS.coachHands ? s1(STATS.coachNet / BB / STATS.coachHands * 100) : '—'} <small>(${STATS.coachHands})</small></dd></div>` +
+    (TSTATS.played ? `
+    <div><dt>Turnee jucate</dt><dd>${TSTATS.played}</dd></div>
+    <div><dt>Pe bani · câștigate</dt><dd>${TSTATS.itm} · ${TSTATS.wins}</dd></div>
+    <div><dt>Loc mediu</dt><dd>${(TSTATS.placeSum / TSTATS.played).toFixed(1)}</dd></div>
+    <div><dt>Pe bani (%)</dt><dd>${Math.round(TSTATS.itm / TSTATS.played * 100)}%</dd></div>` : '');
+
+  // jurnal
+  el.log.innerHTML = LOG.map(l => `<li class="${l.cls}">${l.html}</li>`).join('');
+  el.log.scrollTop = el.log.scrollHeight;
+
+  // setări
+  document.querySelectorAll('#playersSeg button').forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.n) === SET.players)));
+  document.querySelectorAll('#styleSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.s === SET.style)));
+  document.querySelectorAll('#speedSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === SET.speed)));
+  $('#optEq').checked = SET.showEq; $('#optOpen').checked = SET.openCards; $('#optSit').checked = SET.sitOut;
+  $('#optCoach').checked = SET.coach; $('#optHud').checked = SET.hud; $('#optAuto').checked = SET.autoCoach;
+  const cs = COACH[SET.coachStyle] || COACH.echilibrat;
+  document.querySelectorAll('#coachSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.c === SET.coachStyle)));
+  $('#coachNote').textContent = cs.note;
+  $('#coachLabel').textContent = `Antrenorul (${cs.label.toLowerCase()}) spune`;
+  const sitOk = SET.players >= 3 && !TOUR;
+  $('#optSit').disabled = !sitOk; $('#sitLabel').classList.toggle('off', !sitOk);
+  document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === SET.mode)));
+  el.tableNote.textContent = TOUR && SET.players !== P.length ? `Următorul turneu va avea ${SET.players} jucători.`
+    : SET.players !== P.length ? `Masa trece la ${SET.players} jucători de la mâna următoare.`
+    : (SET.style === 'mix' ? 'Mix: fiecare bot are stilul lui, ca la o masă reală.' : `Toți boții joacă ${STYLES[SET.style].label.toLowerCase()}.`);
+}
+
+function humanAct(type, to){
+  if (G.handOver || G.runout || G.toAct !== 0) return;
+  clearTimeout(botTimer);
+  if (type === 'fold' && legal(0).canCheck) type = 'check';
+  if (type === 'raise') act(0, 'raise', to ?? Number(el.amt.value));
+  else act(0, type);
+}
+function applyAdvice(auto){
+  if (G.handOver || G.runout || G.toAct !== 0) return;
+  if (!G.advice) G.advice = coachAdvice();
+  if (auto) G.autoHand = true;
+  const r = G.advice.rec;
+  if (r.tag) (G.moves = G.moves || []).push({ tag:r.tag, opp:r.opp || null });
+  humanAct(r.type, r.to);
+}
+function scheduleAuto(){
+  clearTimeout(botTimer);
+  if (!SET.autoCoach || G.handOver || G.runout || G.toAct !== 0) return;
+  const hand = G.handNum, base = SET.speed === 'rapid' ? 300 : 800;
+  botTimer = setTimeout(() => { if (G.handNum === hand && SET.autoCoach) applyAdvice(true); }, base + Math.random() * base);
+}
+function nextHand(){
+  if (!G.handOver) return;
+  clearTimeout(autoTimer);
+  if (TOUR && TOUR.over) return newGame(false);
+  if (!TOUR && P[0].stack <= 0){ P[0].stack = START; P[0].buyins++; log('Te-ai reîncărcat cu 1.000.', 'st'); }
+  startHand();
+}
+function newGame(resetStats = true){
+  clearTimeout(botTimer); clearTimeout(runTimer); clearTimeout(autoTimer);
+  P.length = 0; ensurePlayers(); buildSeats();
+  Object.assign(G, { button:-1, handNum:0, handOver:true, result:null, board:[], pos:{}, winners:[] });
+  if (SET.mode === 'turneu'){
+    if (P.length < 2){ SET.players = 2; ensurePlayers(); buildSeats(); }
+    P.forEach(p => { p.stack = TSTART; p.out = false; p.place = 0; });
+    SET.sitOut = false;
+    TOUR = { level:0, handsAtLevel:0, startN:P.length, over:false };
+  } else TOUR = null;
+  if (resetStats){ STATS = freshStats(); }
+  LOG = [];
+  if (TOUR) log(`Turneu nou: ${P.length} jucători, ${fmt(TSTART)} jetoane fiecare, blindurile cresc la fiecare ${HANDS_PER_LEVEL} mâini.`, 'st');
+  startHand();
+}
+
+el.fold.addEventListener('click', () => humanAct('fold'));
+el.call.addEventListener('click', () => humanAct('call'));
+el.raise.addEventListener('click', () => humanAct('raise'));
+el.btnNext.addEventListener('click', nextHand);
+$('#newGame').addEventListener('click', newGame);
+el.range.addEventListener('input', () => { el.amt.value = el.range.value; updateRaiseLabel(); });
+el.amt.addEventListener('input', () => { el.range.value = el.amt.value; updateRaiseLabel(); });
+el.amt.addEventListener('change', () => setRaiseValue(Number(el.amt.value)));
+el.presets.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !b.disabled) setRaiseValue(presetValue(b.dataset.p)); });
+$('#playersSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  SET.players = Number(b.dataset.n); if (SET.players < 3) SET.sitOut = false; saveSet();
+  if (G.handOver && !TOUR){ ensurePlayers(); buildSeats(); }
+  render();
+});
+$('#modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.m === SET.mode) return;
+  SET.mode = b.dataset.m; saveSet(); newGame(false);
+});
+$('#learnReset').addEventListener('click', () => { LEARN = { g:{}, o:{} }; saveLearn(); render(); });
+$('#styleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; SET.style = b.dataset.s; saveSet(); render(); });
+$('#speedSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; SET.speed = b.dataset.v; saveSet(); render(); });
+$('#optEq').addEventListener('change', e => { SET.showEq = e.target.checked; saveSet(); render(); });
+$('#optOpen').addEventListener('change', e => { SET.openCards = e.target.checked; saveSet(); render(); });
+$('#optSit').addEventListener('change', e => {
+  SET.sitOut = e.target.checked && SET.players >= 3;
+  if (!SET.sitOut) clearTimeout(autoTimer);
+  else if (G.handOver) autoTimer = setTimeout(nextHand, 600);
+  render();
+});
+el.coachApply.addEventListener('click', () => applyAdvice(false));
+$('#coachSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  SET.coachStyle = b.dataset.c; saveSet();
+  if (!G.handOver && !G.runout && G.toAct === 0 && (SET.coach || SET.autoCoach)){ G.advice = coachAdvice(); scheduleAuto(); }
+  render();
+});
+$('#optCoach').addEventListener('change', e => {
+  SET.coach = e.target.checked; saveSet();
+  if (SET.coach && !G.handOver && !G.runout && G.toAct === 0 && !G.advice) G.advice = coachAdvice();
+  render();
+});
+$('#optHud').addEventListener('change', e => { SET.hud = e.target.checked; saveSet(); render(); });
+$('#optAuto').addEventListener('change', e => {
+  SET.autoCoach = e.target.checked;
+  clearTimeout(autoTimer);
+  if (SET.autoCoach){
+    if (G.handOver) autoTimer = setTimeout(nextHand, 600);
+    else if (!G.runout && G.toAct === 0){ if (!G.advice) G.advice = coachAdvice(); scheduleAuto(); }
+  } else if (!G.handOver && G.toAct === 0) clearTimeout(botTimer);
+  render();
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input[type=number]') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (G.handOver && (k === 'enter' || k === ' ')){ e.preventDefault(); nextHand(); return; }
+  if (k === 'a') applyAdvice(false);
+  else if (k === 'f') humanAct('fold');
+  else if (k === 'c' || k === 'k') humanAct('call');
+  else if (k === 'r') humanAct('raise');
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layoutSeats, 80); });
+
+connectBridge();
+newGame();
+})();
+</script>

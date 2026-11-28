@@ -1,0 +1,1748 @@
+﻿<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Jarvis: o coloană îngustă, gândită să stea lângă fereastra jocului. Aceleași culori ca masa de poker. */
+:root{
+  --ink:#0c1512; --panel:#131f1b; --panel-2:#1a2a24; --line:rgba(236,230,214,.13);
+  --brass:#dcae55; --brass-soft:rgba(220,174,85,.16); --cream:#ece6d6; --muted:#98aca1;
+  --fold:#e0735c; --win:#86d6a1; --warn:#e8b04f;
+  --suit-s:#ece6d6; --suit-h:#ef6f68; --suit-d:#79a6f0; --suit-c:#6fcf8f;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--cream);margin:0}
+body{font-family:var(--f-body);font-size:14.5px;line-height:1.5}
+*{box-sizing:border-box}
+button,input{font:inherit;color:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.app{max-width:620px;margin:0 auto;padding:14px 16px 32px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1;letter-spacing:.06em}
+.top h1 span{color:var(--brass)}
+.status{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.status b{color:var(--win);font-weight:500}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.panel h2{margin:0 0 8px;font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.note{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+.err{margin:6px 0 0;font-size:13px;color:var(--fold);min-height:1.2em}
+.field{display:grid;gap:4px;margin:8px 0}
+.field span{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.field input{padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--ink);font-family:var(--f-mono);font-size:17px;letter-spacing:.2em;text-transform:uppercase}
+.btn{min-height:42px;padding:8px 14px;border-radius:9px;border:1px solid transparent;font-weight:600;cursor:pointer}
+.btn.main{background:var(--brass);color:var(--ink);width:100%}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--cream);min-height:34px;font-size:13px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.seg button{min-height:32px;border:0;border-radius:7px;background:transparent;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-selected="true"],.seg button[aria-checked="true"]{background:var(--brass);color:var(--ink);font-weight:600}
+.advice{border-color:rgba(220,174,85,.5);background:linear-gradient(180deg,var(--brass-soft),transparent 70%),var(--panel)}
+.adv-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.adv-act{font-family:var(--f-display);font-weight:800;font-size:38px;line-height:1.05;text-transform:uppercase;margin:2px 0 6px}
+.adv-act.wait{font-size:22px;color:var(--muted)}
+.advice ul{margin:0;padding-left:18px}
+.advice li{margin:3px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:3px 9px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line)}
+.chip b{font-family:var(--f-mono);font-weight:500}
+.cards b{font-family:var(--f-mono)}
+.s{color:var(--suit-s)} .h{color:var(--suit-h)} .d{color:var(--suit-d)} .c{color:var(--suit-c)}
+.opp{padding:8px 0;border-top:1px solid var(--line)}
+.opp:first-child{border-top:0;padding-top:0}
+.opp-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.opp-name{font-weight:600}
+.opp-name small{color:var(--muted);font-weight:400}
+.opp-num{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.opp ul{margin:3px 0 0;padding-left:18px;font-size:13px;color:var(--cream)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0}
+.stats div{background:var(--panel-2);border-radius:8px;padding:6px 9px}
+.stats dt{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stats dd{margin:1px 0 0;font-family:var(--f-mono);font-size:15px;font-variant-numeric:tabular-nums}
+.pos{color:var(--win)} .neg{color:var(--fold)}
+canvas{width:100%;height:140px;display:block;margin-top:10px}
+.reviews{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.reviews li{background:var(--panel-2);border-radius:9px;padding:8px 10px;font-size:13px}
+.rv-head{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.rv-head span{font-family:var(--f-mono);font-weight:500}
+.rv-d{margin:3px 0 0;padding-left:16px}
+.rv-d li{background:none;padding:0;margin:2px 0}
+.ok{color:var(--win)} .bad{color:var(--fold)} .diff{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 0 5px}
+td{padding:4px 0;border-top:1px solid var(--line)}
+.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* Jarvis Vision */
+.vision-panel{border:1px solid rgba(220,174,85,.55);background:linear-gradient(145deg,rgba(220,174,85,.09),transparent 65%),var(--panel)}
+.vision-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vision-grid .field{margin:0}
+.vision-grid input,.vision-grid select{width:100%;min-width:0}
+.vision-grid select,.vision-opps input[type=number]{padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--ink);color:var(--cream);font-family:var(--f-mono)}
+.vision-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.vision-video{width:100%;max-height:180px;object-fit:contain;background:#050807;border-radius:9px;margin-top:10px}
+.vision-help{font-size:12px;color:var(--muted);line-height:1.45}
+.vision-advice{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(220,174,85,.5);background:var(--brass-soft)}
+.vision-advice .adv-act{font-size:46px}
+.vision-advice ul{margin:6px 0 0;padding-left:18px}
+.vision-advice li{margin:3px 0}
+.vision-detail{font-family:var(--f-mono);font-size:16px}
+.vision-ctx{font-size:12px;color:var(--muted);margin-top:2px}
+.vision-opps{margin-top:10px}
+.vision-opps input[type=number]{width:92px}
+.vision-opps small{color:var(--brass);font-family:var(--f-mono)}
+.vision-check{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px}
+#visionForm summary{cursor:pointer;font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.vision-learn{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--warn);background:rgba(232,176,79,.08)}
+.vision-learn h2{color:var(--warn)}
+.vl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.vl img{height:64px;border-radius:5px;border:1px solid var(--line);image-rendering:auto}
+.vl input{width:84px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--ink);font-family:var(--f-mono);text-transform:none}
+.vl span{font-size:13px;flex:1;min-width:120px}
+.vcal{position:fixed;inset:0;z-index:50;background:var(--ink);display:flex;flex-direction:column}
+.vcal-top{padding:10px 12px;border-bottom:1px solid var(--line)}
+.vcal-top .chip{cursor:pointer;color:var(--cream)}
+.vcal-top .chip[aria-pressed="true"]{background:var(--brass);color:var(--ink);font-weight:600}
+.vcal-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.vcal-btns .btn.main{width:auto;margin-left:auto}
+.vcal-scroll{flex:1;overflow:auto}
+#vcalCanvas{height:auto;margin:0;cursor:crosshair;touch-action:none}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>JAR<span>VIS</span></h1>
+      <p class="status" id="status">Neconectat</p>
+    </div>
+    <button class="btn ghost" id="discBtn" type="button" hidden>Deconectează</button>
+  </header>
+
+
+  <section class="panel vision-panel" id="visionPanel">
+    <h2>Vision Engine · citește masa de pe ecran</h2>
+    <p class="vision-help">Alege fereastra mesei și atât. Găsesc singur cărțile tale și cărțile comune, le citesc după formă și caut pe masă potul și suma de plătit. Dacă o carte nu poate fi citită sigur, te întreb o singură dată și țin minte.</p>
+    <div class="vision-actions">
+      <button class="btn main" id="visionStart" type="button">Alege fereastra / ecranul</button>
+      <button class="btn ghost" id="visionStop" type="button" disabled>Oprește captura</button>
+    </div>
+    <div class="vision-actions">
+      <button class="btn ghost" id="visionCal" type="button" disabled>Avansat: marchează zone</button>
+      <button class="btn ghost" id="visionRelearn" type="button" disabled>Citire greșită? Corectez eu</button>
+    </div>
+    <video id="visionVideo" class="vision-video" autoplay muted playsinline hidden></video>
+    <p class="vision-help" id="visionStatus" aria-live="polite">Captura este oprită. Poți completa și de mână datele de mai jos.</p>
+    <div class="vision-learn" id="visionLearn" hidden></div>
+    <div class="vision-advice" id="visionAdvice" aria-live="polite" hidden>
+      <div class="adv-label">Jarvis spune</div>
+      <div class="adv-act" id="visionAct"></div>
+      <div class="vision-detail" id="visionDetail"></div>
+      <div class="vision-ctx" id="visionCtx"></div>
+      <ul id="visionWhy"></ul>
+    </div>
+    <p class="vision-help" id="visionValidation" role="status"></p>
+    <details id="visionForm" open>
+      <summary>Datele mesei · se completează din captură, le poți corecta</summary>
+      <p class="vision-help">Cărți: As Kh = as de pică, popă de cupă (2-9, T, J, Q, K, A + s/h/d/c). „Pariu” = jetoanele puse în față pe strada curentă. Preflop poți lăsa pariurile pe 0: pun eu blindurile.</p>
+      <div class="vision-grid">
+        <label class="field"><span>Cărțile tale</span><input id="vHole" placeholder="As Kh" autocomplete="off"></label>
+        <label class="field"><span>Cărți comune</span><input id="vBoard" placeholder="7d 8c Qs" autocomplete="off"></label>
+        <label class="field"><span>Jucători în mână la start</span><select id="vN"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>
+        <label class="field"><span>Poziția ta</span><select id="vPos"></select></label>
+        <label class="field"><span>Stack-ul tău (rămas)</span><input id="vStack" type="number" min="0" value="1000"></label>
+        <label class="field"><span>Pariul tău</span><input id="vBet" type="number" min="0" value="0"></label>
+        <label class="field"><span>De plătit (gol = din pariuri)</span><input id="vCall" type="number" min="0" placeholder="auto"></label>
+        <label class="field"><span>Pot total</span><input id="vPot" type="number" min="0" value="0"></label>
+        <label class="field"><span>Big blind</span><input id="vBB" type="number" min="1" value="10"></label>
+        <label class="field"><span>Ante</span><input id="vAnte" type="number" min="0" value="0"></label>
+      </div>
+      <table class="vision-opps">
+        <thead><tr><th>Adversar (în sensul acelor de ceas, de la stânga ta)</th><th>Stack</th><th>Pariu</th><th class="n">În mână</th></tr></thead>
+        <tbody id="vOpps"></tbody>
+      </table>
+      <label class="vision-check"><input type="checkbox" id="vIAgg"> Eu am dat ultimul bet / raise pe strada anterioară</label>
+      <label class="vision-check"><input type="checkbox" id="vRot" checked> Poziția mea avansează singură la fiecare mână nouă</label>
+      <label class="vision-check"><input type="checkbox" id="vPotIncl" checked> Potul afișat pe masă include deja pariurile din față</label>
+      <div class="vision-actions">
+        <button class="btn main" id="visionAnalyze" type="button">Analizează cu Jarvis</button>
+        <button class="btn ghost" id="visionReset" type="button">Resetează datele</button>
+      </div>
+      <div class="vision-actions">
+        <button class="btn ghost" id="visionForget" type="button">Șterge corecturile mele</button>
+        <button class="btn ghost" id="visionUnzone" type="button">Șterge zonele marcate</button>
+      </div>
+    </details>
+  </section>
+
+  <div class="vcal" id="visionCalBox" hidden>
+    <div class="vcal-top">
+      <p class="vision-help" id="vcalHelp">Opțional. Cărțile, potul și suma de plătit le găsesc singur. Marchează zone doar dacă vrei și stack-urile și pariurile fiecărui adversar, butonul dealer sau dacă o citire automată nu merge pe masa ta. Alege o zonă din listă, apoi trage un dreptunghi peste ea.</p>
+      <div class="chips" id="vcalZones"></div>
+      <div class="vcal-btns">
+        <button class="btn ghost" id="vcalZoom" type="button">Mărește ×2</button>
+        <button class="btn ghost" id="vcalDel" type="button">Șterge zona aleasă</button>
+        <button class="btn ghost" id="vcalSnap" type="button">Fotografie nouă</button>
+        <button class="btn main" id="vcalDone" type="button">Gata</button>
+      </div>
+    </div>
+    <div class="vcal-scroll"><canvas id="vcalCanvas"></canvas></div>
+  </div>
+
+  <div class="seg" id="modeSeg" role="radiogroup" aria-label="Unde joci">
+    <button type="button" role="radio" data-m="local">Pe acest calculator</button>
+    <button type="button" role="radio" data-m="online">Online cu prietenii</button>
+  </div>
+
+  <section class="panel" id="connectLocal">
+    <h2>Jocul de pe acest calculator</h2>
+    <p class="advice" style="border:0;background:none;padding:0;margin:0"><span class="adv-act wait" id="localMsg" style="font-size:20px">Aștept jocul…</span></p>
+    <p class="note">Deschide „Antrenament cu boți” din Masa de Poker. Jarvis se leagă singur, fără coduri și fără internet. Tot ce învață se salvează pe calculatorul tău.</p>
+  </section>
+
+  <section class="panel" id="connect">
+    <h2>Conectează-te la locul tău (online)</h2>
+    <p class="note">În joc, la „Antrenorul”, apasă „Conectează Jarvis”. Primești codul mesei și un cod Jarvis de 6 cifre.</p>
+    <label class="field"><span>Codul mesei</span><input id="cTable" maxlength="4" autocomplete="off" placeholder="ABCD"></label>
+    <label class="field"><span>Codul Jarvis</span><input id="cPin" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="123456"></label>
+    <button class="btn main" id="cGo" type="button">Conectează</button>
+    <p class="err" id="cErr" role="alert"></p>
+    <p class="note">Jarvis vede doar ce vezi și tu: cărțile tale, masa și acțiunile tuturor. Nu poate juca în locul tău, iar ceilalți văd eticheta „JARVIS” lângă numele tău. Pentru antrenament singur, creează o masă și adaugă boți.</p>
+  </section>
+
+  <div id="main" hidden>
+    <div class="seg" role="tablist" id="tabs">
+      <button type="button" role="tab" data-t="now" aria-selected="true">Acum</button>
+      <button type="button" role="tab" data-t="review" aria-selected="false">Analiză</button>
+      <button type="button" role="tab" data-t="opps" aria-selected="false">Adversari</button>
+      <button type="button" role="tab" data-t="learn" aria-selected="false">Învățare</button>
+    </div>
+
+    <section id="tab-now" style="display:grid;gap:12px;margin-top:12px">
+      <div class="panel advice">
+        <div class="adv-label" id="advLabel">Jarvis spune</div>
+        <div class="adv-act wait" id="advAct">Aștept rândul tău</div>
+        <ul id="advWhy"></ul>
+      </div>
+      <div class="chips" id="ctx"></div>
+      <div class="panel">
+        <h2>Stilul lui Jarvis</h2>
+        <div class="seg" id="styleSeg" role="radiogroup" aria-label="Stilul lui Jarvis">
+          <button type="button" role="radio" data-c="sigur">Sigur</button>
+          <button type="button" role="radio" data-c="echilibrat">Echilibrat</button>
+          <button type="button" role="radio" data-c="agresiv">Agresiv</button>
+        </div>
+        <p class="note" id="styleNote"></p>
+      </div>
+      <div class="panel"><h2>La masă acum</h2><div id="oppNow"></div></div>
+    </section>
+
+    <section id="tab-review" hidden style="display:grid;gap:12px;margin-top:12px">
+      <div class="panel">
+        <h2>Sesiunea de acum</h2>
+        <dl class="stats" id="sess"></dl>
+        <canvas id="chart" aria-label="Rezultatul cumulat pe mâini"></canvas>
+      </div>
+      <div class="panel"><h2>Ultimele mâini</h2><ol class="reviews" id="reviews"></ol></div>
+      <div class="panel"><h2>Sesiuni anterioare</h2><table id="history"></table></div>
+    </section>
+
+    <section id="tab-opps" hidden style="display:grid;gap:12px;margin-top:12px">
+      <div class="panel">
+        <h2>Profiluri salvate</h2>
+        <p class="note">Jarvis ține minte fiecare jucător de la o sesiune la alta: cât de des intră în pot, cât de agresiv e, cât de des dă fold la pariuri și ce cărți a arătat.</p>
+        <div id="profiles" style="margin-top:8px"></div>
+        <button class="btn ghost" id="profReset" type="button" style="margin-top:10px">Șterge profilurile</button>
+      </div>
+    </section>
+
+    <section id="tab-learn" hidden style="display:grid;gap:12px;margin-top:12px">
+      <div class="panel">
+        <h2>Ce a învățat Jarvis</h2>
+        <table id="learnTbl"></table>
+        <p class="note">Învață din mutările lui pe care le-ai jucat. O mutare reușește când mâna se câștigă fără showdown. Ce merge face mai des, ce nu merge mai rar, separat pentru fiecare jucător.</p>
+        <button class="btn ghost" id="learnReset" type="button" style="margin-top:10px">Șterge ce a învățat</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+/*SHARED*/
+(() => {
+'use strict';
+const SERVER = 'wss://poker-server-production-cb58.up.railway.app/ws';
+const $ = s => document.querySelector(s);
+const fmt = n => Math.round(n).toLocaleString('ro-RO');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const pc = v => Math.round(v * 100) + '%';
+const cardsHTML = cs => cs.map(c => `<b class="${SUITCLS[c & 3]}">${cardText(c)}</b>`).join(' ');
+
+/* ---------- memoria lui Jarvis ----------
+   Pornit din Jarvis.exe / Masa de Poker.exe, Jarvis își ține datele într-un fișier pe calculator
+   (%LOCALAPPDATA%\MasaDePoker\date\jarvis.json), prin serverul local. Altfel le ține în browser. */
+const LOCAL = location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)(:|$)/.test(location.host);
+let D = { style:'echilibrat', profiles:{}, learn:{ g:{}, o:{} }, lastSt:{}, sessions:[], link:null, mode:null };
+try { Object.assign(D, JSON.parse(localStorage.getItem('jarvis') || '{}')); } catch (e) {}
+let saveT = null;
+const save = () => {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    const json = JSON.stringify(D);
+    try { localStorage.setItem('jarvis', json); } catch (e) {}
+    if (LOCAL) fetch('/data/jarvis', { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Masa':'1' }, body:json }).catch(() => {});
+  }, 400);
+};
+
+/* ---------- profilurile adversarilor ---------- */
+const profKey = p => p.bot ? `${p.name} (bot ${STYLES[p.style] ? STYLES[p.style].label.toLowerCase() : ''})` : p.name;
+const blankProf = () => ({ hands:0, vpip:0, pfr:0, agg:0, calls:0, faced:0, foldFaced:0, shows:0, bluffs:0, last:[], seen:0 });
+function updateProfiles(){
+  S.seats.forEach((p, i) => {
+    if (!p || i === S.you) return;
+    const k = S.code + '|' + i + '|' + p.name, prev = D.lastSt[k], cur = p.st;
+    const base = !prev || cur.hands < prev.hands ? null : prev;
+    const pr = D.profiles[profKey(p)] = D.profiles[profKey(p)] || blankProf();
+    let changed = false;
+    ['hands','vpip','pfr','agg','calls','faced','foldFaced'].forEach(f => { const d = cur[f] - (base ? base[f] : 0); if (d > 0){ pr[f] += d; changed = true; } });
+    if (changed){ pr.seen = Date.now(); D.lastSt[k] = { ...cur, at:Date.now() }; save(); }
+    else if (!prev) D.lastSt[k] = { ...cur, at:Date.now() };
+  });
+  // curăță urmele meselor vechi
+  const old = Date.now() - 7 * 864e5;
+  Object.keys(D.lastSt).forEach(k => { if ((D.lastSt[k].at || 0) < old) delete D.lastSt[k]; });
+}
+function profOf(p){ return D.profiles[profKey(p)] || blankProf(); }
+function rates(p){
+  const s = profOf(p);
+  return { vpip:(s.vpip + 3.5) / (s.hands + 10), pfr:(s.pfr + 1.8) / (s.hands + 10), af:(s.agg + 6) / (s.calls + 4), ftb:(s.foldFaced + 2.7) / (s.faced + 6), n:s.hands };
+}
+function notes(p){
+  const s = profOf(p), r = rates(p), out = [];
+  if (s.hands < 8) return ['Prea puține mâini văzute pentru concluzii.'];
+  if (r.vpip > .42) out.push('Joacă foarte multe mâini (loose): range-ul lui e larg.');
+  else if (r.vpip < .18) out.push('Joacă puține mâini (tight): când intră, are de obicei ceva.');
+  if (r.vpip > .25 && r.pfr < r.vpip * .35) out.push('Intră mult cu call și rar cu raise: pasiv preflop.');
+  if (r.af > 2.5) out.push('Foarte agresiv după flop: pariurile lui nu înseamnă mereu mână bună.');
+  else if (r.af < 1) out.push('Pasiv după flop: când pariază, de obicei are mâna.');
+  if (s.faced >= 5){
+    if (r.ftb > .6) out.push(`Dă fold la pariuri în ${pc(r.ftb)} din cazuri: bluffează-l mai des.`);
+    else if (r.ftb < .35) out.push(`Plătește aproape orice (fold doar în ${pc(r.ftb)} din cazuri): nu-l bluffa, pariază pentru valoare.`);
+  }
+  if (s.bluffs >= 2) out.push(`L-am prins bluffând de ${s.bluffs} ori din ${s.shows} showdown-uri.`);
+  return out.length ? out : ['Joc echilibrat, fără o slăbiciune clară încă.'];
+}
+let shownHand = -1;
+function observeShowdown(){
+  const h = S.h; if (!h || !h.over || shownHand === S.handNum) return;
+  shownHand = S.handNum;
+  S.seats.forEach((p, i) => {
+    if (!p || i === S.you || !p.inHand || p.folded || !p.hole || p.hole.length < 2 || p.hole[0] < 0) return;
+    const pr = D.profiles[profKey(p)] = D.profiles[profKey(p)] || blankProf();
+    const sc = h.board.length >= 3 ? evalHand(p.hole.concat(h.board)) : 0, cat = Math.floor(sc / 1048576);
+    const aggr = p.hx && p.hx.postAgg > 0;
+    pr.shows++;
+    const bluff = aggr && h.board.length === 5 && cat <= 0;
+    if (bluff) pr.bluffs++;
+    pr.last.unshift({ c:p.hole, b:h.board.slice(), n: sc ? handName(sc) : '', aggr, bluff });
+    pr.last = pr.last.slice(0, 6);
+  });
+  save();
+}
+
+/* ---------- învățare ---------- */
+const MOVES = { steal:'Furt de blinduri', light3:'3-bet light', cbet:'Continuation bet', barrel:'Al doilea pariu', semi:'Semi-bluff', bluff:'Bluff', push:'All-in (push)' };
+function learnStat(tag, opp){
+  const g = D.learn.g[tag] || { t:0, w:0 }, o = (opp && D.learn.o[opp] && D.learn.o[opp][tag]) || { t:0, w:0 };
+  const t = o.t + g.t * .3, w = o.w + g.w * .3;
+  return { rate:(w + 1) / (t + 2), tries:o.t + g.t, oT:o.t, oW:o.w, gT:g.t, gW:g.w };
+}
+function learnFactor(tag, opp, be){ const s = learnStat(tag, opp); return s.tries < 3 ? 1 : Math.max(.35, Math.min(1.7, s.rate / be)); }
+function learnNote(tag, opp){
+  const s = learnStat(tag, opp);
+  if (s.oT >= 2) return `Din experiență: ${MOVES[tag].toLowerCase()} contra lui ${opp} a reușit de ${s.oW} ori din ${s.oT}.`;
+  if (s.gT >= 3) return `Din experiență: ${MOVES[tag].toLowerCase()} a reușit de ${s.gW} ori din ${s.gT}.`;
+  return '';
+}
+function learnRecord(tag, opp, ok){
+  const g = D.learn.g[tag] = D.learn.g[tag] || { t:0, w:0 }; g.t++; if (ok) g.w++;
+  if (opp){ D.learn.o[opp] = D.learn.o[opp] || {}; const o = D.learn.o[opp][tag] = D.learn.o[opp][tag] || { t:0, w:0 }; o.t++; if (ok) o.w++; }
+  save();
+}
+
+/* ---------- sfatul ---------- */
+const COACH = {
+  sigur:      { label:'Sigur',      open:1.0,  threeMul:.30, callMul:.70, cbet:0,   bluffFtb:.55, value:.68, thin:.56, raise:.78, semiRaise:false, steal:0,   light3:0,   barrel:false, note:'Joacă doar mâini bune și rar bluffează.' },
+  echilibrat: { label:'Echilibrat', open:1.25, threeMul:.40, callMul:.80, cbet:.65, bluffFtb:.45, value:.64, thin:.54, raise:.74, semiRaise:true,  steal:.08, light3:.25, barrel:true,  note:'Deschide mai larg, face continuation bet, fură blindurile și bluffează când adversarul dă des fold.' },
+  agresiv:    { label:'Agresiv',    open:1.55, threeMul:.55, callMul:.85, cbet:.85, bluffFtb:.38, value:.60, thin:.52, raise:.70, semiRaise:true,  steal:.15, light3:.5,  barrel:true,  note:'Presiune maximă: multe raise-uri, 3-bet-uri light și bluff-uri pe mai multe străzi.' }
+};
+const OPEN = { UTG:.15, HJ:.19, CO:.27, BTN:.45, SB:.38, 'BTN/SB':.75, BB:1 };
+const alive = j => { const p = S.seats[j]; return !!p && p.inHand && !p.folded; };
+const potTotal = () => S.seats.reduce((s, p) => s + (p ? p.com : 0), 0);
+function rangeOf(j){
+  const p = S.seats[j], hx = p.hx, r = rates(p); let t = 1;
+  if (hx.pfAct === 'raise') t = Math.max(.04, r.pfr * (hx.pfRaises > 1 ? .4 : 1));
+  else if (hx.pfAct === 'call') t = Math.max(.08, Math.min(r.vpip, .5));
+  else if (hx.pfAct === 'limp') t = Math.min(1, r.vpip * 1.2);
+  return { t, agg: hx.postAgg > 0, called: hx.postCall > 0, bluff: Math.min(.45, Math.max(.08, .1 + .08 * (r.af - 1))) };
+}
+function rangeEquity(hole, opps, iters){
+  const board = S.h.board, used = new Set([...hole, ...board]), rest = [];
+  for (let c = 0; c < 52; c++) if (!used.has(c)) rest.push(c);
+  const n = rest.length, need = 5 - board.length, ranges = opps.map(rangeOf);
+  const boardCat = board.length >= 3 ? Math.floor(evalHand(board) / 1048576) : -1;
+  const swap = (a, b) => { const t = rest[a]; rest[a] = rest[b]; rest[b] = t; };
+  const ok = (h, R) => {
+    if (PCT[h[0] * 52 + h[1]] > R.t) return false;
+    if (board.length < 3 || (!R.agg && !R.called)) return true;
+    if (Math.floor(evalHand(h.concat(board)) / 1048576) > boardCat) return true;
+    const d = hasDraw(h, board);
+    return R.agg ? (d && Math.random() < .6) || Math.random() < R.bluff : d || Math.random() < .3;
+  };
+  let score = 0;
+  for (let it = 0; it < iters; it++){
+    let pos = 0; const hands = [];
+    for (const R of ranges){
+      let tries = 0, h;
+      do { swap(pos, pos + Math.floor(Math.random() * (n - pos))); swap(pos + 1, pos + 1 + Math.floor(Math.random() * (n - pos - 1))); h = [rest[pos], rest[pos + 1]]; tries++; }
+      while (tries < 25 && !ok(h, R));
+      hands.push(h); pos += 2;
+    }
+    for (let k = 0; k < need; k++){ swap(pos, pos + Math.floor(Math.random() * (n - pos))); pos++; }
+    const full = board.concat(rest.slice(pos - need, pos)), me = evalHand(hole.concat(full));
+    let ties = 0, lost = false;
+    for (const h of hands){ const s = evalHand(h.concat(full)); if (s > me){ lost = true; break; } if (s === me) ties++; }
+    if (!lost) score += 1 / (ties + 1);
+  }
+  return score / iters;
+}
+function coachAdvice(){
+  const you = S.you, me = S.seats[you], L = S.legal, h = S.h, pre = h.street === 0, pos = h.pos[you], BB = h.bb;
+  const cfg = COACH[D.style] || COACH.echilibrat;
+  const opps = S.seats.map((_, j) => j).filter(j => j !== you && alive(j)), k = opps.length;
+  const eqR = rangeEquity(me.hole, opps, k > 2 ? 700 : 1100);
+  const pt = potTotal(), need = L.toCall > 0 ? L.callAmt / (pt + L.callAmt) : 0;
+  const to = v => Math.max(L.minTo, Math.min(L.maxTo, Math.round(v / 5) * 5));
+  const nm = j => S.seats[j].name;
+  const suited = (me.hole[0] & 3) === (me.hole[1] & 3);
+  const avg = (arr, f) => arr.length ? arr.reduce((s, j) => s + f(rates(S.seats[j])), 0) / arr.length : 0;
+  const agg = h.lastAgg >= 0 && h.lastAgg !== you ? h.lastAgg : -1;
+  const why = []; let rec;
+  const opp1 = k === 1 ? nm(opps[0]) : (agg >= 0 ? nm(agg) : null);
+  const effBB = Math.min(me.stack + me.bet, Math.max(0, ...opps.map(j => S.seats[j].stack + S.seats[j].bet))) / BB;
+  let icmPen = 0, icmWhy = '';
+  if (S.tour && !S.tour.over){
+    const live = S.seats.filter(p => p && !p.out), paidN = payouts(S.tour.startN).length;
+    if (live.length === paidN + 1){
+      const big = live.every(p => p === me || p.stack <= me.stack);
+      icmPen = big ? .03 : .08;
+      icmWhy = `Bubble: mai e un singur jucător de eliminat până la premii. Un call all-in îți cere cu ${pc(icmPen)} mai mult equity${big ? ', dar ca lider poți presa stivele mici' : ''}.`;
+    } else if (live.length <= paidN && live.length > 1){ icmPen = .03; icmWhy = 'Ești pe bani: fiecare loc urcat valorează, deci ai grijă la call-urile all-in.'; }
+  }
+  const needI = need + (L.callAmt >= me.stack * .4 ? icmPen : 0);
+  if (S.tour || effBB <= 25) why.push(`Stiva ta efectivă: ${effBB.toFixed(1)} BB.`);
+  if (pre){
+    const myPct = pctOf(me.hole);
+    why.push(`${startLabel(me.hole)} e în top ${Math.max(1, Math.round(myPct * 100))}% din mâinile de start.`);
+    if (effBB <= 12){
+      const behind = S.seats.filter((q, j) => q && j !== you && alive(j) && !q.allin && !q.hx.vpip && q.last !== 'Check').length;
+      const pp = Math.min(1, pushPct(effBB, behind) * cfg.open / 1.25 * learnFactor('push', null, .45));
+      if (h.currentBet <= BB){
+        if (myPct <= pp && L.canRaise) rec = { type:'raise', to:L.maxTo, tag:'push', opp:null };
+        else rec = L.toCall === 0 ? { type:'check' } : { type:'fold' };
+        why.push(`Cu ${effBB.toFixed(1)} BB aici e all-in sau fold. De pe ${pos || 'poziția ta'} dai all-in cam cu top ${pc(pp)} din mâini, iar mâna ta ${rec.type === 'raise' ? 'intră' : 'nu intră'}.`);
+      } else if (eqR >= needI){
+        rec = (L.canRaise && myPct <= pp * .4) ? { type:'raise', to:L.maxTo } : { type:'call' };
+        why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e peste cât îți trebuie (${pc(needI)}).`);
+      } else { rec = { type:'fold' }; why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e sub cât îți trebuie (${pc(needI)}).`); }
+      if (icmWhy) why.push(icmWhy);
+      if (rec.tag){ const ln = learnNote('push', null); if (ln) why.push(ln); }
+      return { rec, why, eqR, need };
+    }
+    const limpers = opps.filter(j => S.seats[j].hx.pfAct === 'limp').length;
+    if (L.toCall === 0){
+      if (myPct <= .12 * cfg.open && L.canRaise){ rec = { type:'raise', to: to(BB * 3 + BB * limpers) }; why.push('Mână bună: dă raise ca să-i pedepsești pe cei intrați doar cu call.'); }
+      else { rec = { type:'check' }; why.push('Din big blind vezi flop-ul gratis.'); }
+    } else if (h.currentBet <= BB){
+      const base = OPEN[pos] ?? .2;
+      let open = Math.min(1, base * cfg.open) - .03 * limpers;
+      const blinds = opps.filter(j => h.pos[j] === 'SB' || h.pos[j] === 'BB');
+      const steal = !limpers && ['CO','BTN','SB','BTN/SB'].includes(pos);
+      const bbIdx = opps.find(j => h.pos[j] === 'BB' || h.pos[j] === 'BTN/SB'), bbName = bbIdx !== undefined ? nm(bbIdx) : null;
+      if (steal && cfg.steal) open = Math.min(1, open + cfg.steal * learnFactor('steal', bbName, .4) + Math.max(0, avg(blinds, r => r.ftb) - .45));
+      if (myPct <= open && L.canRaise){
+        rec = { type:'raise', to: to(BB * (effBB <= 25 ? 2.2 : pos === 'BTN/SB' ? 2.5 : 3) + BB * limpers) };
+        if (steal && myPct > base){ rec.tag = 'steal'; rec.opp = bbName; }
+        why.push(steal && myPct > base ? `Furt de blinduri: din ${pos}, cu toți ceilalți ieșiți, un raise câștigă des potul pe loc.` : `Din ${pos} se deschide cu cam ${pc(Math.min(1, base * cfg.open))} din mâini, iar mâna ta intră.`);
+        if (limpers) why.push(`Adaugi câte 1 BB pentru fiecare jucător intrat cu call (${limpers}).`);
+      } else if (pos === 'SB' && limpers > 0 && myPct <= .5){ rec = { type:'call' }; why.push('Din SB completezi ieftin într-un pot cu mai mulți jucători.'); }
+      else { rec = { type:'fold' }; why.push(`Din ${pos} mâna e prea slabă de deschis.`); }
+    } else {
+      const rr = agg >= 0 ? rangeOf(agg).t : .2;
+      if (agg >= 0) why.push(`${nm(agg)} a dat raise. În ${rates(S.seats[agg]).n} mâini văzute dă raise preflop în ${pc(rates(S.seats[agg]).pfr)} din ele, deci range-ul lui e cam top ${pc(rr)}.`);
+      if (h.raises >= 2){
+        if (myPct <= (cfg.light3 >= .5 ? .045 : .03) && L.canRaise){ rec = { type:'raise', to: to(h.currentBet * 2.4) }; why.push('Contra unui re-raise continui agresiv doar cu mâinile de top.'); }
+        else if (myPct <= .08 * cfg.callMul / .7 && eqR >= need * .9){ rec = { type:'call' }; why.push('Mână destul de bună ca să plătești re-raise-ul.'); }
+        else { rec = { type:'fold' }; why.push('Contra unui re-raise, mâna ta e sub range-ul lui.'); }
+      } else {
+        const threeT = Math.max(.025, rr * cfg.threeMul), callT = Math.min(.55, rr * (pos === 'BB' ? 1.05 : cfg.callMul));
+        const late = ['CO','BTN','SB','BB','BTN/SB'].includes(pos);
+        const light = cfg.light3 && late && agg >= 0 && rates(S.seats[agg]).pfr >= .2 && suited && myPct > threeT && myPct <= .4;
+        if (effBB <= 25 && L.canRaise && myPct <= Math.max(.05, rr * cfg.threeMul * 1.5)){ rec = { type:'raise', to:L.maxTo }; why.push(`Re-steal: cu ${effBB.toFixed(1)} BB, un all-in peste raise-ul lui e mai bun decât un 3-bet mic.`); }
+        else if (myPct <= threeT && L.canRaise){ rec = { type:'raise', to: to(h.currentBet * 3) }; why.push('Mâna ta e mult peste range-ul lui: 3-bet pentru valoare.'); }
+        else if (light && L.canRaise && Math.random() < Math.min(.95, cfg.light3 * learnFactor('light3', nm(agg), .45))){ rec = { type:'raise', to: to(h.currentBet * 3), tag:'light3', opp:nm(agg) }; why.push(`3-bet light: ${nm(agg)} deschide des și renunță des la re-raise.`); }
+        else if (myPct <= callT && eqR >= need * .9){ rec = { type:'call' }; why.push(pos === 'BB' ? 'Din BB ai deja bani în pot, deci aperi mai larg.' : 'Destul de bună să joci contra lui, dar nu să-l crești.'); }
+        else { rec = { type:'fold' }; why.push('Mâna e sub range-ul cu care merită să continui contra acestui raise.'); }
+      }
+    }
+  } else {
+    const fair = 1 / (k + 1), eqH = k <= 1 ? eqR : .5 + (eqR - fair) * .5 / (1 - fair);
+    const draw = hasDraw(me.hole, h.board), ftbAll = avg(opps, r => r.ftb);
+    const iWasPfAgg = h.pfAgg === you, iBetLast = me.aggStreet === h.street - 1;
+    why.push(`Ai ${handName(evalHand(me.hole.concat(h.board))).toLowerCase()}${draw ? ', plus un draw' : ''}.`);
+    if (agg >= 0){ const r = rates(S.seats[agg]); why.push(`${nm(agg)} are AF ${r.af.toFixed(1)}: ${r.af > 2.2 ? 'pariază des, deci bluffează și el des' : 'pariază mai ales cu mâini bune'}.`); }
+    if (L.toCall === 0){
+      if (eqH >= cfg.value && L.canRaise){ rec = { type:'raise', to: to(pt * .66) }; why.push('Ești probabil în față: pariază pentru valoare.'); }
+      else if (eqH >= cfg.thin && k <= 2 && L.canRaise){ rec = { type:'raise', to: to(pt * .5) }; why.push('Pariu mic pentru valoare și ca să nu le dai cărți gratis.'); }
+      else if (L.canRaise && cfg.cbet && iWasPfAgg && h.street === 1 && k <= 2 && Math.random() < Math.min(.97, cfg.cbet * learnFactor('cbet', opp1, .3))){ rec = { type:'raise', to: to(pt * .4), tag:'cbet', opp:opp1 }; why.push('Continuation bet: tu ai dat raise preflop, iar pe flop adversarii ratează de cele mai multe ori.'); }
+      else if (L.canRaise && cfg.barrel && iBetLast && k === 1 && (draw || (ftbAll + learnStat('barrel', opp1).rate) / 2 >= cfg.bluffFtb)){ rec = { type:'raise', to: to(pt * .6), tag:'barrel', opp:opp1 }; why.push(draw ? 'Al doilea pariu cu draw: poate da fold, iar dacă plătește mai ai cărți bune.' : `Continui presiunea: dă fold la pariuri în ${pc(ftbAll)} din cazuri.`); }
+      else if (L.canRaise && k <= 2 && draw && h.street < 3 && cfg.semiRaise){ rec = { type:'raise', to: to(pt * .5), tag:'semi', opp:opp1 }; why.push('Semi-bluff: poate da fold acum, iar dacă plătește poți prinde draw-ul.'); }
+      else if (L.canRaise && k === 1 && (ftbAll + learnStat('bluff', opp1).rate) / 2 >= cfg.bluffFtb){ rec = { type:'raise', to: to(pt * .5), tag:'bluff', opp:opp1 }; why.push(`Adversarul dă fold la pariuri în ${pc(ftbAll)} din cazuri: un bluff de ½ pot e profitabil.`); }
+      else { rec = { type:'check' }; why.push('Mâna nu e destul de puternică de pariat. Vezi cartea următoare gratis.'); }
+    } else {
+      if (eqH >= cfg.raise && L.canRaise){ rec = { type:'raise', to: to(h.currentBet + (pt + L.toCall) * .75) }; why.push('Mână foarte puternică: raise pentru valoare.'); }
+      else if (cfg.semiRaise && draw && h.street < 3 && k === 1 && L.canRaise && eqR >= need * .7){ rec = { type:'raise', to: to(h.currentBet * 2.8), tag:'semi', opp:opp1 }; why.push('Semi-bluff raise: câștigi pe loc dacă dă fold, iar dacă plătește ai încă draw-ul.'); }
+      else if (eqR >= needI){ rec = { type:'call' }; why.push(`Equity ${pc(eqR)} față de ${pc(needI)} cât îți trebuie: call profitabil.`); }
+      else if (draw && h.street < 3 && eqR >= need * .75 && L.callAmt <= me.stack * .15){ rec = { type:'call' }; why.push('Cote implicite: dacă îți intră draw-ul, câștigi mai mult pe străzile următoare.'); }
+      else { rec = { type:'fold' }; why.push(`Equity ${pc(eqR)} e sub ${pc(need)}: plătind aici pierzi bani pe termen lung.`); }
+    }
+  }
+  if (rec.tag){ const ln = learnNote(rec.tag, rec.opp); if (ln) why.push(ln); }
+  if (icmWhy) why.push(icmWhy);
+  return { rec, why, eqR, need };
+}
+function recLabel(r, L){
+  if (r.type === 'fold') return 'Fold';
+  if (r.type === 'check' || (r.type === 'call' && !L.toCall)) return 'Check';
+  if (r.type === 'call') return `Call ${fmt(L.callAmt)}`;
+  if (r.to >= L.maxTo) return `All-in ${fmt(L.maxTo)}`;
+  return `${S.h.currentBet === 0 ? 'Bet' : 'Raise la'} ${fmt(r.to)}`;
+}
+
+/* ---------- analiza deciziilor ---------- */
+let S = null, advice = null, adviceKey = '', pend = null, cur = null, reviews = [];
+let sess = { date:new Date().toISOString(), hands:0, net:0, mistakes:0, ev:0, decisions:0, pts:[0] };
+const keyNow = () => S && S.h ? [S.handNum, S.h.street, S.h.currentBet, S.h.toAct].join('|') : '';
+const actOf = (me, p) => {
+  if (me.folded || /^Fold/.test(me.last)) return 'fold';
+  if (/^Check/.test(me.last)) return 'check';
+  if (/^Call/.test(me.last)) return 'call';
+  if (/^All/.test(me.last)) return p.allinIsCall ? 'call' : 'raise';
+  if (/^(Bet|Raise)/.test(me.last)) return 'raise';
+  return null;
+};
+const sameAct = (a, r) => a === r || (a === 'check' && r === 'call' && !pend.call) || (a === 'call' && r === 'check' && !pend.call);
+const ACT_RO = { fold:'fold', check:'check', call:'call', raise:'bet / raise' };
+function trackDecision(){
+  const me = S.seats[S.you];
+  if (pend && (!S.legal || keyNow() !== pend.key)){
+    if (me && S.handNum === pend.hand && cur){
+      const a = actOf(me, pend);
+      if (a){
+        const d = { street:STREETS[pend.street], verdict:'ok', text:'', ev:0 };
+        const pot2 = pend.pot + pend.call;
+        if (a === 'fold' && pend.call > 0 && pend.eq > pend.need + .05){
+          d.verdict = 'bad'; d.ev = pend.eq * pot2 - pend.call;
+          d.text = `Ai dat fold cu equity ${pc(pend.eq)}, deși îți trebuia doar ${pc(pend.need)}. Un call aducea în medie cam ${fmt(d.ev)} jetoane.`;
+        } else if (a === 'call' && pend.call > 0 && pend.eq < pend.need - .05){
+          d.verdict = 'bad'; d.ev = pend.call - pend.eq * pot2;
+          d.text = `Ai plătit ${fmt(pend.call)} cu equity ${pc(pend.eq)}, sub cele ${pc(pend.need)} necesare. Te-a costat în medie cam ${fmt(d.ev)} jetoane.`;
+        } else if (sameAct(a, pend.rec.type)){
+          d.text = `Ai jucat ${ACT_RO[a]}, la fel ca Jarvis.`;
+          if (pend.rec.tag) cur.moves.push({ tag:pend.rec.tag, opp:pend.rec.opp || null });
+        } else {
+          d.verdict = 'diff';
+          d.text = `Ai jucat ${ACT_RO[a]}; Jarvis ar fi jucat ${pend.label.toLowerCase()} (equity ${pc(pend.eq)}${pend.call ? `, îți trebuia ${pc(pend.need)}` : ''}).`;
+        }
+        cur.decisions.push(d); sess.decisions++;
+        if (d.verdict === 'bad'){ sess.mistakes++; sess.ev += d.ev; }
+      }
+    }
+    pend = null;
+  }
+}
+function trackHand(){
+  const me = S.seats[S.you]; if (!me) return;
+  const h = S.h;
+  if (h && !h.over && me.inHand && (!cur || cur.hand !== S.handNum)){
+    cur = { hand:S.handNum, cards:me.hole.slice(), start:me.stack + me.com, buyins:me.buyins, decisions:[], moves:[], done:false };
+  }
+  if (h && h.over && cur && cur.hand === S.handNum && !cur.done){
+    cur.done = true;
+    const delta = me.stack - cur.start;
+    const won = (h.result && h.result.won) || [];
+    const ok = !!(h.result && h.result.byFold) && won[S.you] > 0;
+    cur.moves.forEach(m => learnRecord(m.tag, m.opp, ok));
+    sess.hands++; sess.net += delta; sess.pts.push(sess.net);
+    reviews.unshift({ hand:cur.hand, cards:cur.cards, board:h.board.slice(), delta, title:h.result ? h.result.title : '', decisions:cur.decisions });
+    reviews = reviews.slice(0, 25);
+    saveSession();
+  }
+}
+function saveSession(){
+  const s = { date:sess.date, hands:sess.hands, net:sess.net, mistakes:sess.mistakes, ev:Math.round(sess.ev), decisions:sess.decisions };
+  const i = D.sessions.findIndex(x => x.date === sess.date);
+  if (i >= 0) D.sessions[i] = s; else D.sessions.unshift(s);
+  D.sessions = D.sessions.slice(0, 30); save();
+}
+// Android: bula plutitoare arată recomandarea și când fereastra lui Jarvis e strânsă
+const jvNative = (type, label) => { try { if (window.AndroidJarvis) window.AndroidJarvis.advice(String(type), String(label || '')); } catch (e) {} };
+function maybeAdvise(){
+  if (!S || !S.legal || !S.h){ advice = null; adviceKey = ''; jvNative('wait', ''); return; }
+  const key = keyNow();
+  if (key === adviceKey) return;
+  adviceKey = key; advice = null; renderNow();
+  setTimeout(() => {
+    if (adviceKey !== key || !S || !S.legal) return;
+    advice = safeAdvice();   // întoarce mereu fold / check / call / raise, chiar dacă analiza completă dă greș
+    const L = S.legal, me = S.seats[S.you];
+    pend = { key, hand:S.handNum, street:S.h.street, eq:advice.eqR, need:advice.need, call:L.callAmt, pot:potTotal(), rec:advice.rec,
+      label:recLabel(advice.rec, L), allinIsCall: L.callAmt >= me.stack };
+    renderNow();
+    jvNative(advice.rec.type, pend.label);
+    if (visionMode) visionShowAdvice(advice);
+  }, 20);
+}
+
+/* ---------- conexiunea ---------- */
+let ws = null, retry = null, manualOff = false;
+function connect(){
+  clearTimeout(retry);
+  if (ws){ ws.onclose = null; try { ws.close(); } catch (e) {} ws = null; }
+  if (D.mode === 'local'){
+    if (!LOCAL){ $('#localMsg').textContent = 'Pornește Jarvis din Jarvis.exe'; return; }
+    try { ws = new WebSocket('ws://' + location.host + '/ws?role=jarvis'); } catch (e) { retry = setTimeout(connect, 3000); return; }
+    ws.onopen = () => { ws.send('{"t":"hello"}'); $('#status').textContent = 'Aștept jocul de pe acest calculator…'; };
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } onMsg(m); };
+    ws.onclose = () => { localWaiting('Mă reconectez…'); retry = setTimeout(connect, 2000); };
+    return;
+  }
+  try { ws = new WebSocket(SERVER); } catch (e) { retry = setTimeout(connect, 3000); return; }
+  ws.onopen = () => { if (D.link) ws.send(JSON.stringify({ t:'jarvis', code:D.link.code, jtok:D.link.jtok })); };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } onMsg(m); };
+  ws.onclose = () => { if (!manualOff && D.link && D.mode === 'online'){ $('#status').textContent = 'Legătura s-a întrerupt. Mă reconectez…'; retry = setTimeout(connect, 2000); } };
+}
+function localWaiting(msg){
+  if (D.mode !== 'local' || visionMode) return;
+  S = null; advice = null; pend = null;
+  $('#main').hidden = true; $('#discBtn').hidden = true;
+  $('#connectLocal').hidden = false; $('#connect').hidden = true;
+  $('#localMsg').textContent = msg || 'Aștept jocul…';
+  $('#status').textContent = 'Jocul local nu e deschis';
+}
+function applyMode(){
+  document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === D.mode)));
+  if (D.mode === 'local'){ localWaiting('Aștept jocul…'); }
+  else { $('#connectLocal').hidden = true; showConnect(''); if (D.link){ $('#status').textContent = `Mă reconectez la masa ${D.link.code}…`; } }
+}
+$('#modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.m === D.mode) return;
+  D.mode = b.dataset.m; save(); manualOff = false; applyMode(); connect();
+});
+setInterval(() => { if (ws && ws.readyState === 1) ws.send('{"t":"ping"}'); }, 25000);
+let visionMode = false;
+function onMsg(m){
+  if (m.t === 'jarvisOk'){
+    D.link = { code:m.code, jtok:m.jtok, name:m.name }; save();
+    $('#status').innerHTML = `<b>Conectat</b> la masa ${esc(m.code)} ca ${esc(m.name)}`;
+    $('#connect').hidden = true; $('#main').hidden = false; $('#discBtn').hidden = false; $('#cErr').textContent = '';
+  } else if (m.t === 'error' && m.code === 'jv'){
+    D.link = null; save(); showConnect(m.msg);
+  } else if (m.t === 'jarvisOff'){
+    D.link = null; save(); showConnect(m.msg || 'Jarvis a fost deconectat de la masă.');
+  } else if (m.t === 'peers'){
+    if (D.mode === 'local' && !m.game && !visionMode) localWaiting('Aștept jocul…');
+  } else if (m.t === 'state'){
+    if (visionMode) return; // păstrează starea vizuală activă până când utilizatorul revine la sursa simulatorului
+    if (D.mode === 'local' && $('#main').hidden){
+      $('#connectLocal').hidden = true; $('#connect').hidden = true; $('#main').hidden = false;
+      $('#status').innerHTML = '<b>Conectat</b> la jocul de pe acest calculator';
+    }
+    S = m;
+    updateProfiles(); observeShowdown(); trackDecision(); trackHand(); maybeAdvise();
+    render();
+  }
+}
+function showConnect(msg){
+  $('#connect').hidden = false; $('#main').hidden = true; $('#discBtn').hidden = true;
+  $('#status').textContent = 'Neconectat'; $('#cErr').textContent = msg || '';
+  S = null; advice = null; pend = null;
+}
+$('#cGo').addEventListener('click', () => {
+  const code = $('#cTable').value.trim().toUpperCase(), pin = $('#cPin').value.trim();
+  if (code.length !== 4){ $('#cErr').textContent = 'Codul mesei are 4 litere.'; return; }
+  if (!/^\d{6}$/.test(pin)){ $('#cErr').textContent = 'Codul Jarvis are 6 cifre. Îl primești din joc, la „Conectează Jarvis”.'; return; }
+  manualOff = false;
+  const go = () => ws.send(JSON.stringify({ t:'jarvis', code, pin }));
+  if (ws && ws.readyState === 1) go();
+  else { connect(); ws.addEventListener('open', go, { once:true }); }
+  $('#cErr').textContent = 'Mă conectez…';
+});
+$('#cPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#cGo').click(); });
+$('#discBtn').addEventListener('click', () => { manualOff = true; D.link = null; save(); try { ws.close(); } catch (e) {} showConnect(''); });
+
+/* ---------- desenarea ---------- */
+function renderNow(){
+  const act = $('#advAct'), why = $('#advWhy');
+  if (!S || !S.h){ act.className = 'adv-act wait'; act.textContent = S && !S.running ? 'Jocul nu a început' : 'Aștept mâna următoare'; why.innerHTML = ''; return; }
+  if (S.legal){
+    act.className = 'adv-act';
+    if (!advice){ act.textContent = 'Mă gândesc…'; why.innerHTML = ''; }
+    else { act.textContent = recLabel(advice.rec, S.legal); why.innerHTML = advice.why.map(w => `<li>${esc(w)}</li>`).join('') + `<li>Equity estimat contra range-urilor lor: ${pc(advice.eqR)}${advice.need ? ` · îți trebuie ${pc(advice.need)}` : ''}.</li>`; }
+  } else {
+    act.className = 'adv-act wait';
+    const me = S.seats[S.you];
+    if (S.h.over){
+      const r = reviews[0];
+      act.textContent = r && r.hand === S.handNum ? (r.delta > 0 ? `+${fmt(r.delta)} în mâna asta` : r.delta < 0 ? `${fmt(r.delta)} în mâna asta` : 'Mâna s-a terminat') : 'Mâna s-a terminat';
+      why.innerHTML = r && r.hand === S.handNum ? r.decisions.map(d => `<li class="${d.verdict}">${esc(d.street)}: ${esc(d.text)}</li>`).join('') : '';
+    } else if (me && me.inHand && !me.folded){ act.textContent = `${S.h.toAct >= 0 && S.seats[S.h.toAct] ? S.seats[S.h.toAct].name + ' se gândește' : 'Aștept'}`; why.innerHTML = ''; }
+    else { act.textContent = me && me.folded ? 'Ai dat fold. Urmăresc mâna' : 'Nu ești în mâna asta'; why.innerHTML = ''; }
+  }
+  const ctx = [], me = S.seats[S.you];
+  if (me && me.hole && me.hole.length && me.hole[0] >= 0){
+    ctx.push(`<span class="chip cards">Mâna ta: ${cardsHTML(me.hole)}</span>`);
+    if (S.h.board.length) ctx.push(`<span class="chip cards">Masa: ${cardsHTML(S.h.board)}</span>`);
+    ctx.push(`<span class="chip">${STREETS[S.h.street]} · ${S.h.pos[S.you] || '—'} · <b>${((me.stack + me.bet) / S.h.bb).toFixed(1)}</b> BB</span>`);
+    ctx.push(`<span class="chip">Pot <b>${fmt(potTotal())}</b></span>`);
+  }
+  $('#ctx').innerHTML = ctx.join('');
+}
+function oppBlock(p, live){
+  const r = rates(p), s = profOf(p);
+  const nums = s.hands ? `${Math.round(s.vpip / s.hands * 100)}/${Math.round(s.pfr / s.hands * 100)} · AF ${(s.agg / Math.max(1, s.calls)).toFixed(1)} · fold ${s.faced ? Math.round(s.foldFaced / s.faced * 100) + '%' : '—'} · ${s.hands} mâini` : 'nevăzut încă';
+  const shows = s.last && s.last.length ? `<p class="note">Ultimele cărți arătate: ${s.last.slice(0, 3).map(x => cardsHTML(x.c) + (x.n ? ` (${esc(x.n.toLowerCase())}${x.bluff ? ', bluff' : ''})` : '')).join(' · ')}</p>` : '';
+  return `<div class="opp"><div class="opp-head"><span class="opp-name">${esc(p.name)}${p.bot ? ` <small>bot ${STYLES[p.style] ? STYLES[p.style].label.toLowerCase() : ''}</small>` : ''}${live ? ` <small>· ${fmt(p.stack)}</small>` : ''}</span><span class="opp-num">${nums}</span></div><ul>${notes(p).map(n => `<li>${esc(n)}</li>`).join('')}</ul>${shows}</div>`;
+}
+function render(){
+  if (!S) return;
+  renderNow();
+  document.querySelectorAll('#styleSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.c === D.style)));
+  $('#styleNote').textContent = (COACH[D.style] || COACH.echilibrat).note;
+  const opps = S.seats.filter((p, i) => p && i !== S.you);
+  $('#oppNow').innerHTML = opps.length ? opps.map(p => oppBlock(p, true)).join('') : '<p class="note">Încă nu e nimeni altcineva la masă.</p>';
+  renderReview(); renderProfiles(); renderLearn();
+}
+function renderReview(){
+  const cls = v => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+  const bb = S && S.h ? S.h.bb : (S ? S.bb : 10);
+  $('#sess').innerHTML = `
+    <div><dt>Mâini analizate</dt><dd>${sess.hands}</dd></div>
+    <div><dt>Rezultat</dt><dd class="${cls(sess.net)}">${sess.net > 0 ? '+' : ''}${fmt(sess.net)}</dd></div>
+    <div><dt>Decizii · greșeli</dt><dd>${sess.decisions} · <span class="${sess.mistakes ? 'neg' : ''}">${sess.mistakes}</span></dd></div>
+    <div><dt>Pierdut prin greșeli</dt><dd class="${sess.ev ? 'neg' : ''}">${fmt(sess.ev)} <small>(${(sess.ev / bb).toFixed(1)} BB)</small></dd></div>`;
+  drawChart();
+  $('#reviews').innerHTML = reviews.length ? reviews.map(r => `<li><div class="rv-head"><span class="cards">#${r.hand} · ${cardsHTML(r.cards)}${r.board.length ? ' · ' + cardsHTML(r.board) : ''}</span><span class="${cls(r.delta)}">${r.delta > 0 ? '+' : ''}${fmt(r.delta)}</span></div>${r.decisions.length ? `<ul class="rv-d">${r.decisions.map(d => `<li class="${d.verdict}">${esc(d.street)}: ${esc(d.text)}</li>`).join('')}</ul>` : '<p class="note">Fără decizii de analizat (fold din start sau nu era rândul tău).</p>'}</li>`).join('')
+    : '<li class="note">Mâinile jucate apar aici, cu fiecare decizie a ta comparată cu ce ar fi făcut Jarvis.</li>';
+  const past = D.sessions.filter(s => s.date !== sess.date);
+  $('#history').innerHTML = past.length ? '<thead><tr><th>Data</th><th class="n">Mâini</th><th class="n">Rezultat</th><th class="n">Greșeli</th></tr></thead><tbody>' +
+    past.map(s => `<tr><td>${new Date(s.date).toLocaleDateString('ro-RO')} ${new Date(s.date).toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}</td><td class="n">${s.hands}</td><td class="n ${cls(s.net)}">${s.net > 0 ? '+' : ''}${fmt(s.net)}</td><td class="n">${s.mistakes}</td></tr>`).join('') + '</tbody>'
+    : '<tbody><tr><td class="note">Sesiunile tale vor apărea aici.</td></tr></tbody>';
+}
+function drawChart(){
+  const cv = $('#chart'), w = cv.clientWidth || 300, hgt = 140, dpr = window.devicePixelRatio || 1;
+  cv.width = w * dpr; cv.height = hgt * dpr;
+  const g = cv.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, w, hgt);
+  const pts = sess.pts, css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue('--line').trim(), muted = css.getPropertyValue('--muted').trim(), brass = css.getPropertyValue('--brass').trim();
+  const min = Math.min(0, ...pts), max = Math.max(0, ...pts), pad = 18;
+  const y = v => hgt - pad - (v - min) / ((max - min) || 1) * (hgt - 2 * pad);
+  const x = i => 4 + i / Math.max(1, pts.length - 1) * (w - 8);
+  g.strokeStyle = line; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y(0)); g.lineTo(w, y(0)); g.stroke();
+  g.fillStyle = muted; g.font = '11px IBM Plex Mono, monospace';
+  g.fillText(pts.length > 1 ? `${max > 0 ? '+' : ''}${fmt(max)}` : 'Rezultatul pe mâini apare aici', 6, 12);
+  if (pts.length > 1){
+    g.fillText(fmt(min), 6, hgt - 4);
+    g.strokeStyle = brass; g.lineWidth = 2; g.beginPath();
+    pts.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v))); g.stroke();
+    g.fillStyle = brass; g.beginPath(); g.arc(x(pts.length - 1), y(pts[pts.length - 1]), 3.5, 0, Math.PI * 2); g.fill();
+  }
+}
+function renderProfiles(){
+  const keys = Object.keys(D.profiles).sort((a, b) => D.profiles[b].hands - D.profiles[a].hands);
+  $('#profiles').innerHTML = keys.length ? keys.map(k => {
+    const m = /^(.*) \(bot (\w*)\)$/.exec(k);
+    const fake = m ? { name:m[1], bot:true, style:Object.keys(STYLES).find(s => STYLES[s].label.toLowerCase() === m[2]) || null } : { name:k, bot:false };
+    return oppBlock(fake, false);
+  }).join('') : '<p class="note">Niciun profil încă. Jucătorii apar aici după primele mâini.</p>';
+}
+function renderLearn(){
+  $('#learnTbl').innerHTML = '<thead><tr><th>Mutare</th><th class="n">Încercări</th><th class="n">Reușite</th></tr></thead><tbody>' +
+    Object.keys(MOVES).map(tag => { const s = D.learn.g[tag] || { t:0, w:0 }; return `<tr><td>${MOVES[tag]}</td><td class="n">${s.t}</td><td class="n">${s.t ? Math.round(s.w / s.t * 100) + '%' : '—'}</td></tr>`; }).join('') + '</tbody>';
+}
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  ['now','review','opps','learn'].forEach(t => { $('#tab-' + t).hidden = t !== b.dataset.t; });
+  if (b.dataset.t === 'review') drawChart();
+});
+$('#styleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; D.style = b.dataset.c; save(); adviceKey = ''; maybeAdvise(); render(); });
+$('#profReset').addEventListener('click', () => { D.profiles = {}; D.lastSt = {}; save(); render(); renderProfiles(); });
+$('#learnReset').addEventListener('click', () => { D.learn = { g:{}, o:{} }; save(); renderLearn(); });
+window.addEventListener('resize', () => { if (!$('#tab-review').hidden) drawChart(); });
+
+
+/* ---------- Motorul de decizie: răspuns garantat ---------- */
+// Dacă analiza completă dă greș, decizia se ia din equity contra unor mâini aleatorii și din cotele potului.
+function fallbackAdvice(err){
+  const me = S.seats[S.you], L = S.legal, k = Math.max(1, S.seats.filter((p, j) => p && j !== S.you && alive(j)).length);
+  let eq = 0; try { eq = equity(me.hole, S.h.board, k, 1500); } catch (e) {}
+  const pt = potTotal(), need = L.toCall > 0 ? L.callAmt / (pt + L.callAmt) : 0;
+  const rec = L.toCall > 0 ? { type: eq >= need ? 'call' : 'fold' }
+    : (eq >= .62 && L.canRaise ? { type:'raise', to: Math.max(L.minTo, Math.min(L.maxTo, Math.round(pt * .6))) } : { type:'check' });
+  const why = [`Decizie simplificată, doar din equity (${pc(eq)}) și cotele potului${need ? ` (îți trebuie ${pc(need)})` : ''}.`];
+  if (err) why.push('Analiza completă a eșuat: ' + (err.message || err));
+  return { rec, why, eqR:eq, need };
+}
+function safeAdvice(){
+  let a = null, err = null;
+  try { a = coachAdvice(); } catch (e) { err = e; }
+  if (!a || !a.rec || !['fold','check','call','raise'].includes(a.rec.type) || !isFinite(a.eqR)){
+    try { a = fallbackAdvice(err); } catch (e) { a = { rec:{ type: S.legal.toCall > 0 ? 'fold' : 'check' }, why:['Nu am putut analiza mâna: ' + (e.message || e)], eqR:0, need:0 }; }
+  }
+  const L = S.legal; let r = a.rec;
+  if (r.type === 'raise' && (!L.canRaise || !isFinite(r.to))) r = { type: L.toCall > 0 ? (a.eqR >= a.need ? 'call' : 'fold') : 'check' };
+  if (r.type === 'raise') r.to = Math.max(L.minTo, Math.min(L.maxTo, r.to));
+  if (r.type === 'check' && L.toCall > 0) r = { type: a.eqR >= a.need ? 'call' : 'fold' };
+  if ((r.type === 'fold' || r.type === 'call') && L.toCall === 0) r = { type:'check' };
+  a.rec = r;
+  return a;
+}
+
+/* ---------- Jarvis Vision: masa reconstruită corect + recunoaștere din captură ---------- */
+const vEl = id => document.getElementById(id);
+const POS_BY_N = { 2:['BTN/SB','BB'], 3:['BTN','SB','BB'], 4:['BTN','SB','BB','UTG'], 5:['BTN','SB','BB','UTG','CO'], 6:['BTN','SB','BB','UTG','HJ','CO'] };
+const VRANKS = '23456789TJQKA', VSUITS = 'shdc';
+const cardLbl = c => VRANKS[c >> 2] + VSUITS[c & 3];
+// Datele Vision (zonele marcate și cărțile învățate) se salvează împreună cu restul memoriei lui Jarvis.
+const VD = () => {
+  const v = D.vision = (D.vision && typeof D.vision === 'object') ? D.vision : {};
+  v.zones = v.zones || {}; v.tpl = v.tpl || {};
+  if (v.potIncl === undefined) v.potIncl = true;
+  return v;
+};
+let visionHand = 0, visionAutoT = null, visionSig = '';
+
+function visionCards(text){
+  const tokens = (text || '').toUpperCase().replace(/10/g, 'T').replace(/[;,|]/g, ' ').split(/\s+/).filter(Boolean);
+  const suits = { S:0, '♠':0, H:1, '♥':1, D:2, '♦':2, C:3, '♣':3 }, cards = [], bad = [];
+  for (const tok of tokens){
+    const m = tok.match(/^([2-9TJQKA])([SHDC♠♥♦♣])$/);
+    if (m) cards.push(VRANKS.indexOf(m[1]) * 4 + suits[m[2]]); else bad.push(tok);
+  }
+  return { cards, bad };
+}
+function visionBuildForm(){
+  const N = +vEl('vN').value, P = POS_BY_N[N], pos = vEl('vPos').value, old = {};
+  vEl('vPos').innerHTML = P.map(p => `<option>${p}</option>`).join('');
+  vEl('vPos').value = P.includes(pos) ? pos : P[0];
+  document.querySelectorAll('#vOpps input').forEach(i => { old[i.id] = i.type === 'checkbox' ? i.checked : i.value; });
+  let h = '';
+  for (let i = 1; i < N; i++) h += `<tr><td>Adversar ${i} <small id="vP${i}"></small></td><td><input id="vS${i}" type="number" min="0" value="${old['vS' + i] ?? 1000}" aria-label="Stack adversar ${i}"></td><td><input id="vB${i}" type="number" min="0" value="${old['vB' + i] ?? 0}" aria-label="Pariu adversar ${i}"></td><td class="n"><input id="vIn${i}" type="checkbox" ${old['vIn' + i] === false ? '' : 'checked'} aria-label="Adversar ${i} în mână"></td></tr>`;
+  vEl('vOpps').innerHTML = h;
+  visionPosLabels();
+}
+function visionPosLabels(){
+  const N = +vEl('vN').value, P = POS_BY_N[N], hp = P.indexOf(vEl('vPos').value);
+  for (let i = 1; i < N; i++){ const e = vEl('vP' + i); if (e) e.textContent = P[(hp + i) % N]; }
+}
+// Construiește starea mesei exact în forma pe care o primește motorul de la simulator.
+// Locul 0 ești tu; adversarii urmează în sensul acelor de ceas, deci pozițiile ies din poziția ta.
+function visionBuildState(myTurn){
+  const num = (id, min) => Math.max(min, Number(vEl(id).value) || 0);
+  const hc = visionCards(vEl('vHole').value), bc = visionCards(vEl('vBoard').value);
+  if (hc.bad.length || bc.bad.length) throw new Error(`Nu înțeleg cartea „${hc.bad.concat(bc.bad)[0]}”. Scrie de exemplu As, Kh, Td, 7c.`);
+  const hole = hc.cards, board = bc.cards;
+  if (hole.length !== 2) throw new Error('Am nevoie de exact două cărți ale tale, de exemplu As Kh.');
+  if (![0, 3, 4, 5].includes(board.length)) throw new Error('Masa trebuie să aibă 0, 3, 4 sau 5 cărți comune.');
+  if (new Set(hole.concat(board)).size !== hole.length + board.length) throw new Error('Aceeași carte apare de două ori.');
+  const N = +vEl('vN').value, P = POS_BY_N[N], hp = P.indexOf(vEl('vPos').value), posOf = j => P[(hp + j) % N];
+  const bb = num('vBB', 1), ante = num('vAnte', 0), warn = [];
+  const stacks = [num('vStack', 0)], bets = [num('vBet', 0)], live = [true];
+  for (let i = 1; i < N; i++){ stacks.push(num('vS' + i, 0)); bets.push(num('vB' + i, 0)); live.push(vEl('vIn' + i).checked); }
+  if (stacks[0] + bets[0] <= 0) throw new Error('Completează stack-ul tău.');
+  if (!live.some((v, j) => j && v)) throw new Error('Trebuie să fie cel puțin un adversar în mână.');
+  const street = board.length === 0 ? 0 : board.length - 2, pre = street === 0;
+  if (pre && Math.max(...bets) < bb){
+    // blindurile nu au fost introduse: le pun în dreptul pozițiilor SB și BB
+    for (let j = 0; j < N; j++){ const p = posOf(j), blind = Math.min(stacks[j], p === 'BB' ? bb : (p === 'SB' || p === 'BTN/SB') ? bb / 2 : 0); if (blind > bets[j]){ stacks[j] -= blind - bets[j]; bets[j] = blind; } }
+  }
+  const callTxt = vEl('vCall').value.trim();
+  if (callTxt !== '' && isFinite(Number(callTxt))){
+    const want = Math.max(0, Number(callTxt)), liveOpps = live.map((v, j) => j && v ? j : 0).filter(Boolean);
+    if (Math.max(...liveOpps.map(j => bets[j])) - bets[0] !== want){
+      liveOpps.forEach(j => { bets[j] = Math.min(bets[j], bets[0] + want); });
+      if (want > 0) bets[liveOpps[0]] = bets[0] + want;       // nu știu cine a pariat: pun pariul la primul adversar rămas în mână
+    }
+  }
+  for (let j = 1; j < N; j++) if (live[j] && stacks[j] + bets[j] <= 0){ stacks[j] = stacks[0] + bets[0]; warn.push(`Nu știu stack-ul adversarului ${j}; îl consider egal cu al tău.`); }
+  const sum = bets.reduce((a, b) => a + b, 0); let pot = num('vPot', 0);
+  if (pot < sum){ if (pot > 0) warn.push(`Potul introdus (${fmt(pot)}) e mai mic decât pariurile din față (${fmt(sum)}); folosesc ${fmt(sum)}.`); pot = sum; }
+  const floor = pre ? bb : 0, maxBet = Math.max(...bets.map((b, j) => live[j] ? b : 0));
+  // Agresorul: primul jucător cu pariul maxim, pornind de la stânga ta. Cei cu același pariu după el au dat call.
+  let agg = -1;
+  if (maxBet > floor) for (let j = 1; j < N; j++) if (live[j] && bets[j] === maxBet){ agg = j; break; }
+  const levels = [...new Set(bets.filter(b => b > floor))].sort((a, b) => a - b), raises = levels.length;
+  const dead = (pot - sum) / live.filter(Boolean).length;
+  const iAgg = street > 0 && vEl('vIAgg').checked;
+  const stats = () => ({ hands:0, vpip:0, pfr:0, agg:0, calls:0, faced:0, foldFaced:0 });
+  const seats = [];
+  for (let j = 0; j < N; j++){
+    const hx = { pfAct:'none', pfRaises:0, postAgg:0, postCall:0, vpip:false, pfr:false }, b = bets[j];
+    if (j){
+      if (pre){
+        if (j === agg){ hx.pfAct = 'raise'; hx.pfRaises = raises; }
+        else if (b > bb && b < maxBet){ hx.pfAct = 'raise'; hx.pfRaises = 1; }
+        else if (b === maxBet && maxBet > bb) hx.pfAct = 'call';
+        else if (b >= bb && posOf(j) !== 'BB') hx.pfAct = 'limp';
+      } else {
+        hx.pfAct = 'call';          // a ajuns pe flop: nu mai are o mână oarecare
+        if (j === agg) hx.postAgg = 1; else if (b === maxBet && maxBet > 0) hx.postCall = 1;
+      }
+      hx.vpip = hx.pfAct !== 'none'; hx.pfr = hx.pfAct === 'raise';
+    }
+    seats.push({ name: j ? `Adversar ${j} (${posOf(j)})` : 'Tu', bot:false, style:null, stack:stacks[j], buyins:1, bet:b, com:b + (live[j] ? dead : 0),
+      out:false, place:0, folded:!live[j], allin: j > 0 && live[j] && stacks[j] === 0, inHand:true, last:'', connected:true, coach:false, sitOut:false,
+      st:stats(), hx, aggStreet: !j && iAgg ? street - 1 : -1, host:!j, jarvis:false, hole: j ? [-1, -1] : hole });
+  }
+  const toCall = Math.max(0, maxBet - bets[0]), maxTo = stacks[0] + bets[0];
+  const prev = Math.max(0, ...[floor].concat(levels).filter(v => v < maxBet)), raiseSize = Math.max(bb, maxBet - prev);
+  const canRaise = stacks[0] > toCall && seats.some((p, j) => j && live[j] && !p.allin);
+  const legal = { toCall, callAmt:Math.min(toCall, stacks[0]), canCheck:toCall === 0, canRaise, maxTo, minTo:Math.min(maxTo, maxBet > 0 ? maxBet + raiseSize : bb) };
+  return { t:'state', code:'VISION', you:0, host:true, running:true, waiting:false, handNum:visionHand, button:(N - hp) % N, now:Date.now(),
+    settings:{ coachAllowed:true, mode:'cash', stack:stacks[0], turnTime:0 }, sb:bb / 2, bb, ante, tour:null,
+    h:{ street, board, currentBet:maxBet, minRaise:raiseSize, toAct: myTurn ? 0 : -1, over:false, runout:false, lastAgg:agg, raises, pfAgg: iAgg ? 0 : (pre ? agg : -1),
+      pos:seats.map((_, j) => posOf(j)), winners:[], bb, ante },
+    seats, legal: myTurn ? legal : null, log:[], chat:[], warn };
+}
+function visionBox(word, detail, ctx, why, wait){
+  if (wait) jvNative('wait', '');
+  vEl('visionAdvice').hidden = false;
+  vEl('visionAct').className = 'adv-act' + (wait ? ' wait' : '');
+  vEl('visionAct').textContent = word; vEl('visionDetail').textContent = detail || ''; vEl('visionCtx').textContent = ctx || '';
+  vEl('visionWhy').innerHTML = (why || []).map(w => `<li>${esc(w)}</li>`).join('');
+}
+function visionShowAdvice(a){
+  const L = S.legal, word = { fold:'FOLD', check:'CHECK', call:'CALL', raise:'RAISE' }[a.rec.type], lbl = recLabel(a.rec, L);
+  const k = S.seats.filter((p, j) => j && alive(j)).length;
+  visionBox(word, lbl.toUpperCase() === word ? '' : lbl,
+    `${STREETS[S.h.street]} · ${S.h.pos[0]} · pot ${fmt(potTotal())} · de plătit ${fmt(L.callAmt)} · ${k} ${k === 1 ? 'adversar' : 'adversari'} în mână`,
+    a.why.concat(`Equity estimat: ${pc(a.eqR)}${a.need ? ` · îți trebuie ${pc(a.need)}` : ''}.`));
+  vEl('visionValidation').textContent = (S.warn || []).join(' ');
+}
+function visionAnalyzeNow(){
+  try {
+    const st = visionBuildState(V.turn !== false);
+    visionMode = true; S = st; advice = null; adviceKey = ''; pend = null;
+    $('#connectLocal').hidden = true; $('#connect').hidden = true; $('#main').hidden = false; $('#discBtn').hidden = true;
+    $('#status').textContent = visionStream ? 'Analiză din captură' : 'Analiză din datele introduse';
+    vEl('visionValidation').textContent = '';
+    if (!S.legal) visionBox('Aștept rândul tău', '', '', [], true);
+    maybeAdvise(); render();
+  } catch (e) { vEl('visionAdvice').hidden = true; vEl('visionValidation').textContent = e.message; }
+}
+function visionFormSig(){ return [...document.querySelectorAll('#visionForm input, #visionForm select')].map(e => e.type === 'checkbox' ? +e.checked : e.value).join('|') + '|' + V.turn; }
+// Reface analiza doar când datele chiar s-au schimbat (altfel recomandarea ar tremura între două calcule).
+function visionAuto(){
+  clearTimeout(visionAutoT);
+  visionAutoT = setTimeout(() => {
+    const sig = visionFormSig(); if (sig === visionSig) return; visionSig = sig;
+    if (visionCards(vEl('vHole').value).cards.length === 2) visionAnalyzeNow();
+    else { vEl('visionAdvice').hidden = true; if (visionMode) vEl('visionValidation').textContent = 'Completează cărțile tale ca să primești recomandarea.'; }
+  }, 250);
+}
+
+/* --- captura și recunoașterea --- */
+let visionStream = null, visionLoop = null, visionBusy = false, visionWorker = null, visionOCROff = false, visionSeq = 0;
+const V = { last:{}, lastH:{}, ocrH:{}, read:{}, match:{}, applied:{}, pending:new Map(), turn:null, holeKey:'', heroAgg:-1, learnSig:'', calOpen:false, canvas:null };
+const VT = 14, FW = 32, FH = 44, FN = FW * FH;
+const vSmall = document.createElement('canvas'); vSmall.width = FW; vSmall.height = FH;
+const vSctx = vSmall.getContext('2d', { willReadFrequently:true });
+function visionStatus(s){ vEl('visionStatus').textContent = s; }
+function visionResetReads(){ V.last = {}; V.lastH = {}; V.ocrH = {}; V.read = {}; V.match = {}; V.applied = {}; V.pending.clear(); V.turn = null; V.cardSig = ''; V.kwHash = 0; V.kwAt = 0; V.kwTries = 0; visionRenderLearn(); }
+function visionStop(){
+  if (visionLoop){ clearInterval(visionLoop); visionLoop = null; }
+  if (visionStream){ visionStream.getTracks().forEach(t => t.stop()); visionStream = null; }
+  const v = vEl('visionVideo'); v.pause(); v.srcObject = null; v.hidden = true;
+  vEl('visionStart').disabled = false; ['visionStop','visionCal','visionRelearn'].forEach(id => { vEl(id).disabled = true; });
+  visionResetReads();
+  visionStatus('Captura este oprită. Poți completa și de mână datele de mai jos.');
+}
+async function visionStart(){
+  try {
+    if (window.AndroidJarvis){ visionStop(); visionStream = await jvAndroidStream(); }
+    else {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error('captura ecranului nu este suportată în această fereastră.');
+    visionStop();
+    visionStream = await navigator.mediaDevices.getDisplayMedia({ video:{ frameRate:5 }, audio:false });
+    const v = vEl('visionVideo'); v.srcObject = visionStream; v.hidden = false; await v.play();
+    }
+    vEl('visionStart').disabled = true; ['visionStop','visionCal','visionRelearn'].forEach(id => { vEl(id).disabled = false; });
+    visionStream.getVideoTracks()[0].addEventListener('ended', visionStop, { once:true });
+    visionStatus('Captură activă. Caut cărțile pe masă…'); autoFindCards.hero = null; V.handsSeen = 0; V.sawButtons = false;
+    await autoLoadFonts();
+    visionLoop = setInterval(visionTick, 700);
+  } catch (e) { visionStop(); visionStatus('Nu am putut porni captura: ' + (e.message || e)); }
+}
+/* Android: aplicația capturează ecranul (MediaProjection) și pune ultima imagine la /frame.
+   Aici o aduc în fundal într-un canvas, iar visionGrab îl folosește în loc de <video>. */
+const JV = { on:false, seq:'', canvas:null, ready:false, timer:null, ended:null, wait:null };
+function jvAndroidStream(){
+  return new Promise((resolve, reject) => {
+    JV.wait = { resolve, reject };
+    window.__jvCaptureStarted = () => {
+      if (!JV.wait) return;
+      const w = JV.wait; JV.wait = null; JV.on = true; JV.ready = false; JV.seq = ''; jvPull();
+      const track = { stop(){ JV.on = false; clearTimeout(JV.timer); try { window.AndroidJarvis.stopCapture(); } catch (e) {} },
+        addEventListener(ev, fn){ if (ev === 'ended') JV.ended = fn; } };
+      w.resolve({ getTracks:() => [track], getVideoTracks:() => [track] });
+    };
+    window.__jvCaptureFailed = msg => { if (JV.wait){ const w = JV.wait; JV.wait = null; w.reject(new Error(msg || 'captura a fost refuzată')); } };
+    window.__jvCaptureEnded = () => { const was = JV.on; JV.on = false; clearTimeout(JV.timer); if (was && JV.ended){ const f = JV.ended; JV.ended = null; f(); } };
+    try { window.AndroidJarvis.startCapture(); } catch (e) { JV.wait = null; reject(e); }
+  });
+}
+async function jvPull(){
+  if (!JV.on) return;
+  try {
+    const r = await fetch('/frame?s=' + encodeURIComponent(JV.seq), { cache:'no-store' });
+    if (r.status === 200){
+      JV.seq = r.headers.get('X-Seq') || '';
+      const bmp = await createImageBitmap(await r.blob());
+      const c = JV.canvas || (JV.canvas = document.createElement('canvas'));
+      if (c.width !== bmp.width || c.height !== bmp.height){ c.width = bmp.width; c.height = bmp.height; }
+      c.getContext('2d', { willReadFrequently:true }).drawImage(bmp, 0, 0); bmp.close && bmp.close(); JV.ready = true;
+    }
+  } catch (e) {}
+  if (JV.on) JV.timer = setTimeout(jvPull, 350);
+}
+function visionGrab(){
+  if (window.AndroidJarvis){
+    if (!visionStream || !JV.ready) return null;
+    const c = V.canvas || (V.canvas = document.createElement('canvas'));
+    if (c.width !== JV.canvas.width || c.height !== JV.canvas.height){ c.width = JV.canvas.width; c.height = JV.canvas.height; }
+    c.getContext('2d', { willReadFrequently:true }).drawImage(JV.canvas, 0, 0);
+    return c;
+  }
+  const v = vEl('visionVideo');
+  if (!visionStream || v.readyState < 2 || !v.videoWidth) return null;
+  const c = V.canvas || (V.canvas = document.createElement('canvas'));
+  if (c.width !== v.videoWidth || c.height !== v.videoHeight){ c.width = v.videoWidth; c.height = v.videoHeight; }
+  c.getContext('2d', { willReadFrequently:true }).drawImage(v, 0, 0);
+  return c;
+}
+const vPx = (frame, r) => [Math.round(r[0] * frame.width), Math.round(r[1] * frame.height), Math.max(2, Math.round(r[2] * frame.width)), Math.max(2, Math.round(r[3] * frame.height))];
+// Amprenta unei zone: 32×44 luminanță + 8×11 nuanță (roșu față de albastru), ca să deosebească și culorile cărților.
+function visionFeat(frame, r){
+  const [x, y, w, h] = vPx(frame, r);
+  vSctx.imageSmoothingEnabled = true; vSctx.imageSmoothingQuality = 'high';
+  vSctx.drawImage(frame, x, y, w, h, 0, 0, FW, FH);
+  const d = vSctx.getImageData(0, 0, FW, FH).data, f = new Uint8Array(FN + 88), cs = new Float32Array(88);
+  for (let i = 0; i < FN; i++){
+    const R = d[i * 4], G = d[i * 4 + 1], B = d[i * 4 + 2];
+    f[i] = (R * 77 + G * 150 + B * 29) >> 8;
+    cs[(((i / FW) | 0) >> 2) * 8 + ((i % FW) >> 2)] += R - B;
+  }
+  for (let k = 0; k < 88; k++) f[FN + k] = Math.max(0, Math.min(255, 128 + cs[k] / 32));
+  return f;
+}
+// Distanța = media celor mai diferite 4 blocuri de 4×4. Așa o diferență mică (doar rangul, doar culoarea) nu se pierde în medie.
+function visionDist(a, b){
+  const top = [0, 0, 0, 0];
+  for (let by = 0; by < 11; by++) for (let bx = 0; bx < 8; bx++){
+    let s = 0;
+    for (let y = 0; y < 4; y++){ const o = (by * 4 + y) * FW + bx * 4; s += Math.abs(a[o] - b[o]) + Math.abs(a[o + 1] - b[o + 1]) + Math.abs(a[o + 2] - b[o + 2]) + Math.abs(a[o + 3] - b[o + 3]); }
+    const v = Math.max(s / 16, Math.abs(a[FN + by * 8 + bx] - b[FN + by * 8 + bx]) * 2);
+    let m = 0; for (let i = 1; i < 4; i++) if (top[i] < top[m]) m = i;
+    if (v > top[m]) top[m] = v;
+  }
+  return (top[0] + top[1] + top[2] + top[3]) / 4;
+}
+const visionEnc = f => { let s = ''; for (let i = 0; i < f.length; i++) s += String.fromCharCode(f[i]); return btoa(s); };
+const vDecCache = new Map();
+function visionDec(b64){
+  let f = vDecCache.get(b64);
+  if (!f){ const s = atob(b64); f = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) f[i] = s.charCodeAt(i); vDecCache.set(b64, f); }
+  return f;
+}
+function visionClassify(pool, f){
+  let best = null, bd = 1e9;
+  for (const t of VD().tpl[pool] || []){ const d = visionDist(f, visionDec(t.f)); if (d < bd){ bd = d; best = t; } }
+  return best && bd < VT ? best : null;
+}
+function visionHash(frame, r){
+  const [x, y, w, h] = vPx(frame, r), d = frame.getContext('2d').getImageData(x, y, w, h).data;
+  let hsh = 2166136261;
+  for (let i = 0; i < d.length; i += 4) hsh = Math.imul(hsh ^ ((d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 12), 16777619);
+  return hsh >>> 0;
+}
+function visionCrop(frame, r){
+  const [x, y, w, h] = vPx(frame, r), c = document.createElement('canvas'), s = Math.min(3, 128 / h);
+  c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+  c.getContext('2d').drawImage(frame, x, y, w, h, 0, 0, c.width, c.height);
+  return c.toDataURL('image/png');
+}
+const ZONES_FIXED = [['h1','Cartea ta 1'], ['h2','Cartea ta 2'], ['board','Cele 5 cărți comune (un singur dreptunghi)'], ['pot','Potul (cifra)'], ['hs','Stack-ul tău'], ['hb','Pariul tău'], ['hd','Butonul dealer la tine'], ['turn','Butoanele tale de acțiune']];
+function visionZoneList(){
+  const out = ZONES_FIXED.slice(), N = +vEl('vN').value;
+  for (let i = 1; i < N; i++) out.push([`o${i}s`, `Adv. ${i}: stack`], [`o${i}b`, `Adv. ${i}: pariu`], [`o${i}c`, `Adv. ${i}: cărți`], [`o${i}d`, `Adv. ${i}: buton dealer`]);
+  return out;
+}
+function VZ(){ return V.zonesOK ? VD().zones : VZ.none; }
+VZ.none = {};
+function visionSlots(){
+  const z = VZ(), N = +vEl('vN').value, out = [];
+  const bin = ['hd','turn'], nums = ['pot','hs','hb'];
+  for (let i = 1; i < N; i++){ bin.push(`o${i}c`, `o${i}d`); nums.push(`o${i}s`, `o${i}b`); }
+  bin.forEach(k => { if (z[k]) out.push({ k, pool:k, kind:'bin', r:z[k] }); });
+  nums.forEach(k => { if (z[k]) out.push({ k, kind:'num', r:z[k] }); });
+  return out;
+}
+
+/* --- cifrele (pot, stack-uri, pariuri) se citesc cu OCR doar pe zona decupată --- */
+async function visionLoadOCR(){
+  if (visionWorker) return visionWorker;
+  if (visionOCROff) return null;
+  try {
+    if (!window.Tesseract){
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = resolve; s.onerror = () => reject(new Error('fără internet')); document.head.appendChild(s);
+      });
+    }
+    const w = await Tesseract.createWorker('eng');
+    await w.setParameters({ tessedit_char_whitelist:'0123456789.,kKmM$€ ', tessedit_pageseg_mode:'7' });
+    visionWorker = w;
+  } catch (e) { visionOCROff = true; }   // fără OCR: cărțile merg în continuare, cifrele rămân de completat de mână
+  return visionWorker;
+}
+function visionParseNum(t){
+  const m = (t || '').replace(/\s+/g, '').match(/(\d[\d.,]*)([kKmM])?/); if (!m) return null;
+  let s = m[1].replace(/[.,]+$/, ''); const mult = m[2] ? (/k/i.test(m[2]) ? 1e3 : 1e6) : 1, last = Math.max(s.lastIndexOf('.'), s.lastIndexOf(','));
+  if (last >= 0){
+    if (s.length - last - 1 === 3 && !m[2]) s = s.replace(/[.,]/g, '');          // 1,250 sau 1.250.000 = separator de mii
+    else s = s.slice(0, last).replace(/[.,]/g, '') + '.' + s.slice(last + 1);     // 12.5 sau 1,2k = zecimale
+  }
+  const v = parseFloat(s) * mult; return isFinite(v) ? Math.round(v * 100) / 100 : null;
+}
+// Întoarce numărul citit, null dacă zona nu conține un număr, undefined dacă OCR-ul nu e disponibil.
+async function visionOCRNum(frame, r){
+  const w = await visionLoadOCR(); if (!w) return undefined;
+  const [x, y, cw, ch] = vPx(frame, r), s = Math.max(2, Math.min(6, 64 / ch)), c = document.createElement('canvas');
+  c.width = Math.round(cw * s) + 24; c.height = Math.round(ch * s) + 24;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+  g.drawImage(frame, x, y, cw, ch, 12, 12, c.width - 24, c.height - 24);
+  const im = g.getImageData(12, 12, c.width - 24, c.height - 24), d = im.data, n = d.length / 4;
+  let lo = 255, hi = 0, sum = 0; const L = new Uint8Array(n);
+  for (let i = 0; i < n; i++){ const v = (d[i * 4] * 77 + d[i * 4 + 1] * 150 + d[i * 4 + 2] * 29) >> 8; L[i] = v; sum += v; if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (hi - lo < 40) return null;                                   // zonă uniformă: nu e scris nimic
+  const dark = sum / n < (lo + hi) / 2;                             // fundal închis: inversez, ca textul să fie negru pe alb
+  for (let i = 0; i < n; i++){ let v = (L[i] - lo) * 255 / (hi - lo); if (dark) v = 255 - v; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.putImageData(im, 12, 12);
+  try {
+    let res = await w.recognize(c);
+    if (!/\d/.test(res.data.text)){
+      // o singură cifră (de ex. stack 0) nu se citește ca rând de text: mai încerc o dată ca un singur caracter
+      await w.setParameters({ tessedit_pageseg_mode:'10' }); res = await w.recognize(c); await w.setParameters({ tessedit_pageseg_mode:'7' });
+      return /^\s*\d\s*$/.test(res.data.text) && res.data.confidence >= 60 ? visionParseNum(res.data.text) : null;
+    }
+    return res.data.confidence < 40 ? null : visionParseNum(res.data.text);
+  }
+  catch (e) { return undefined; }
+}
+
+const CARD_KEYS = ['h1','h2','b1','b2','b3','b4','b5'];
+async function visionTick(){
+  if (visionBusy || V.calOpen) return;
+  const frame = visionGrab(); if (!frame) return;
+  visionBusy = true;
+  try {
+    // zonele marcate de mână rămân valabile doar cât fereastra capturată are aceeași formă ca la marcare
+    V.zonesOK = !!VD().zAspect && Math.abs(VD().zAspect / (frame.width / frame.height) - 1) < .03;
+    const z = VZ(), R = V.read, boxes = {}, now = {}, feats = {};
+    // unde sunt cărțile: le caut singur în imagine; dacă ai marcat tu zonele, le folosesc pe acelea
+    if (z.h1 && z.h2){
+      boxes.h1 = z.h1; boxes.h2 = z.h2;
+      if (z.board) for (let i = 0; i < 5; i++) boxes['b' + (i + 1)] = [z.board[0] + z.board[2] * i / 5, z.board[1], z.board[2] / 5, z.board[3]];
+      V.found = null;
+    }
+    const readAt = r => {                                                        // întâi corecturile tale, apoi citirea automată
+      const f = visionFeat(frame, r), t = visionClassify('card', f);
+      return { f, t, l: t ? t.l : V.askAll ? null : autoReadCard(frame, r) };
+    };
+    const got = {};
+    if (!boxes.h1){
+      const fc = autoFindCards(frame), cache = new Map(), rd = r => { if (!cache.has(r)) cache.set(r, readAt(r)); return cache.get(r); };
+      const pick = autoPick(fc, r => rd(r).l); V.found = { hero:!!pick.hero, board:pick.board ? pick.board.R.length : 0, buttons:fc.buttons };
+      if (pick.hero) pick.hero.R.forEach((r, i) => { boxes['h' + (i + 1)] = r; got['h' + (i + 1)] = rd(r); });
+      if (pick.board) pick.board.R.forEach((r, i) => { boxes['b' + (i + 1)] = r; got['b' + (i + 1)] = rd(r); });
+    }
+    for (const k of CARD_KEYS){
+      const r = boxes[k]; if (!r){ now[k] = '-'; continue; }
+      const o = got[k] || readAt(r), p = V.pending.get(k); feats[k] = o.f;
+      if (p && visionDist(p.f, o.f) < 6){ now[k] = null; continue; }           // aștept răspunsul tău pentru cartea asta
+      if (o.t) V.match[k] = o.t; else delete V.match[k];
+      now[k] = o.l;
+    }
+    const sig = CARD_KEYS.map(k => now[k]).join(','), steady = sig === V.cardSig || V.askAll; V.cardSig = sig;
+    if (steady){                                                                 // aceeași citire de două ori la rând: nu e o animație
+      for (const k of CARD_KEYS){
+        R[k] = now[k];
+        if (now[k] !== null) V.pending.delete(k);
+        else if (!V.pending.has(k)) V.pending.set(k, { id:++visionSeq, k, pool:'card', kind:'card', f:feats[k], img:visionCrop(frame, boxes[k]) });
+      }
+    }
+    V.askAll = false;
+    const slots = visionSlots();
+    for (const s of slots){
+      if (s.kind !== 'bin') continue;
+      const f = visionFeat(frame, s.r), prev = V.last[s.k]; V.last[s.k] = f;
+      if (!prev || visionDist(f, prev) > 5){ V.pending.delete(s.k); continue; }   // zona încă se mișcă: aștept cadrul următor
+      const t = visionClassify(s.pool, f);
+      if (t){ R[s.k] = t.l; V.match[s.k] = t; V.pending.delete(s.k); }
+      else {
+        R[s.k] = null; delete V.match[s.k];
+        const p = V.pending.get(s.k);
+        if (!p || visionDist(p.f, f) > 5) V.pending.set(s.k, { id:++visionSeq, k:s.k, pool:s.pool, kind:s.kind, f, img:visionCrop(frame, s.r) });
+      }
+    }
+    visionRenderLearn();
+    if (!steady) return;
+    for (const s of slots){
+      if (s.kind !== 'num') continue;
+      const hsh = visionHash(frame, s.r), same = V.lastH[s.k] === hsh; V.lastH[s.k] = hsh;
+      if (same && V.ocrH[s.k] !== hsh){ R[s.k] = await visionOCRNum(frame, s.r); V.ocrH[s.k] = hsh; }
+    }
+    if (R.h1 && R.h1 !== '-' && R.h2 && R.h2 !== '-') await autoKeywords(frame, boxes.h1, boxes.h2);
+    visionApply();
+  } catch (e) { visionStatus('Eroare la citirea capturii: ' + (e.message || e)); }
+  finally { visionBusy = false; }
+}
+
+/* --- textul de pe masă: potul („Pot: 150"), suma de plătit („Call 40"), dacă e rândul tău, stack-ul tău --- */
+let autoWorker = null;
+async function autoLoadOCR(){
+  if (autoWorker) return autoWorker;
+  if (!(await visionLoadOCR())) return null;               // încarcă biblioteca OCR (are nevoie de internet prima dată)
+  try { const w = await Tesseract.createWorker('eng'); await w.setParameters({ tessedit_pageseg_mode:'11' }); autoWorker = w; } catch (e) { visionOCROff = true; }
+  return autoWorker;
+}
+const KW_NUM = '\\s*[:=]?\\s*[$€]?\\s*(\\d[\\d.,]*\\s?[kKmM]?)';
+const KW = {
+  pot:new RegExp('(?:pot|bote|total)' + KW_NUM, 'i'),
+  call:new RegExp('(?:call|pl[aă]te[sș]te|igualar|pagar)(?:\\s*all[- ]?in)?(?:' + KW_NUM + ')?', 'i'),
+  check:/\b(?:check|pasar|pas)\b/i, fold:/\b(?:fold|retirarse|renun[tț][aă])\b/i
+};
+async function autoKeywords(frame, h1, h2){
+  const z = VZ();
+  if (z.pot && z.turn && z.hs) return;                    // zonele marcate acoperă deja tot
+  if (Date.now() - (V.kwAt || 0) < 2500) return;          // cel mult o citire la 2,5 secunde
+  const hsh = visionHash(frame, [0, 0, 1, 1]);
+  // aceeași imagine: o recitesc (cel mult de două ori, cu cealaltă polaritate) doar dacă n-am găsit butoanele
+  if (hsh === V.kwHash){ if (V.read.kTurn === true || V.kwTries >= 2) return; V.kwTries++; } else V.kwTries = 0;
+  const w = await autoLoadOCR(); if (!w) return;
+  V.kwHash = hsh;
+  // prima citire: toată masa. Recitirea: doar partea de jos (butoanele), mărită, ca textul mic să fie mai clar.
+  const retry = V.kwTries > 0, oy = retry ? Math.round(frame.height * .55) : 0, s = retry ? Math.min(2, 2200 / frame.width) : Math.min(1, 1600 / frame.width), c = document.createElement('canvas'); c.width = Math.round(frame.width * s); c.height = Math.round((frame.height - oy) * s);
+  const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(frame, 0, oy, frame.width, frame.height - oy, 0, 0, c.width, c.height);
+  // mesele au de obicei text deschis pe fond închis, iar OCR-ul citește mai bine negru pe alb: trec în alb-negru și inversez
+  const im = g.getImageData(0, 0, c.width, c.height), px = im.data; let sum = 0;
+  for (let i = 0; i < px.length; i += 4){ const v = (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8; px[i] = v; sum += v; }
+  const inv = (sum / (px.length / 4) < 128) !== (V.kwTries === 2);
+  for (let i = 0; i < px.length; i += 4){ const v = inv ? 255 - px[i] : px[i]; px[i] = px[i + 1] = px[i + 2] = v; }
+  g.putImageData(im, 0, 0);
+  let words;
+  try { words = ((await w.recognize(c)).data.words || []).filter(x => x.confidence > 35 && x.text.trim()); } catch (e) { return; }
+  finally { V.kwAt = Date.now(); }
+  words.forEach(x => { x.bbox = { x0:x.bbox.x0 / s, x1:x.bbox.x1 / s, y0:x.bbox.y0 / s + oy, y1:x.bbox.y1 / s + oy }; });   // înapoi în coordonatele cadrului
+  // cuvintele de pe același rând, unul lângă altul, formează o frază
+  words.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  const lines = [];
+  for (const wd of words){
+    const hgt = wd.bbox.y1 - wd.bbox.y0, cy = (wd.bbox.y0 + wd.bbox.y1) / 2;
+    const ln = lines.find(L => Math.abs(L.cy - cy) < .6 * hgt && wd.bbox.x0 - L.x1 < 1.5 * hgt && wd.bbox.x0 - L.x1 > -hgt);
+    if (ln){ ln.text += ' ' + wd.text.trim(); ln.x1 = wd.bbox.x1; } else lines.push({ text:wd.text.trim(), cy, x0:wd.bbox.x0, x1:wd.bbox.x1, y0:wd.bbox.y0, y1:wd.bbox.y1 });
+  }
+  if (V.found && V.found.buttons.length){
+    // butoanele găsite după formă, citite unul câte unul: mult mai sigur decât textul mic citit din toată imaginea
+    try {
+      await w.setParameters({ tessedit_pageseg_mode:'7' });
+      for (const r of V.found.buttons){ const t = ((await w.recognize(autoButtonImage(frame, r))).data.text || '').trim(); if (t) lines.push({ text:t, cy:0, x0:0, x1:0, y0:0, y1:0 }); }
+    } catch (e) {} finally { try { await w.setParameters({ tessedit_pageseg_mode:'11' }); } catch (e) {} }
+  }
+  const R = V.read; let pot = V.kwTries ? R.kPot ?? null : null, call = V.kwTries && R.kCall != null ? R.kCall : undefined, buttons = false; const used = new Set();
+  for (const L of lines){
+    let m = L.text.match(KW.pot); if (m && pot === null){ pot = visionParseNum(m[1]); used.add(L); }
+    m = L.text.match(KW.call); if (m){ buttons = true; used.add(L); if (m[1]) call = visionParseNum(m[1]); }
+    if (KW.check.test(L.text)){ buttons = true; used.add(L); if (call === undefined) call = 0; }
+    if (KW.fold.test(L.text)){ buttons = true; used.add(L); }
+  }
+  if (buttons) V.sawButtons = true;
+  R.kPot = pot; R.kCall = call === undefined ? null : call;
+  R.kTurn = buttons ? true : V.sawButtons ? false : null;     // dacă am văzut vreodată butoanele și acum lipsesc, nu e rândul tău
+  // stack-ul tău: numărul cel mai apropiat de cărțile tale (de preferat sub ele)
+  const cx = (h1[0] + h2[0] + h2[2]) / 2 * frame.width, top = h1[1] * frame.height, bot = (h1[1] + h1[3]) * frame.height, ch = bot - top; let best = null;
+  for (const L of lines){
+    if (used.has(L) || !/^[$€]?\s*\d[\d.,]*\s?[kKmM]?$/.test(L.text)) continue;
+    const lx = (L.x0 + L.x1) / 2, ly = (L.y0 + L.y1) / 2;
+    if (Math.abs(lx - cx) > 2.2 * ch || ly < top - ch || ly > bot + 1.4 * ch) continue;
+    const d = Math.hypot(lx - cx, ly - (bot + .3 * ch)) + (ly < bot ? ch : 0);
+    if (!best || d < best.d) best = { d, v:visionParseNum(L.text) };
+  }
+  R.kStack = best ? best.v : V.kwTries ? R.kStack ?? null : null;
+}
+// Trece ce s-a citit în formular. Un câmp e rescris doar când citirea lui se schimbă, deci corecturile tale rămân.
+function visionApply(){
+  const R = V.read, N = +vEl('vN').value, P = POS_BY_N[N], z = VZ();
+  const set = (id, val) => {
+    if (val === undefined || val === null) return; const e = vEl(id), sv = String(val);
+    if (!e || V.applied[id] === sv) return; V.applied[id] = sv;
+    if (e.type === 'checkbox') e.checked = !!val; else e.value = sv;
+  };
+  if (CARD_KEYS.some(k => R[k] === undefined)) return;
+  const unknown = CARD_KEYS.filter(k => R[k] === null).length;
+  if (unknown){ visionStatus(`Captură activă · ${unknown === 1 ? 'o carte pe care nu o pot citi sigur' : unknown + ' cărți pe care nu le pot citi sigur'}. Spune-mi mai jos ce ${unknown === 1 ? 'este' : 'sunt'}.`); return; }
+  const hole = [R.h1, R.h2], board = CARD_KEYS.slice(2).map(k => R[k]);
+  if ((hole[0] === '-') !== (hole[1] === '-')) return;               // se împart cărțile
+  if (hole[0] === '-'){
+    visionStatus(V.found && !V.found.hero ? `Captură activă · nu văd cărțile tale pe masă${V.found.board ? ' (văd ' + V.found.board + ' cărți comune)' : ''}. Toată masa trebuie să fie vizibilă în fereastra aleasă.` : 'Captură activă · nu ai cărți în mână.');
+    V.holeKey = '';
+    if (V.applied.vHole !== ''){ V.applied.vHole = ''; vEl('vHole').value = ''; visionSig = ''; if (visionMode) visionBox('Aștept mâna următoare', '', '', [], true); }
+    return;
+  }
+  const n = board.filter(c => c !== '-').length;
+  if (![0, 3, 4, 5].includes(n) || board.slice(0, n).includes('-')) return;   // flopul încă se întoarce
+  if (new Set(hole.concat(board.slice(0, n))).size !== n + 2){ visionStatus('Aceeași carte apare de două ori: o citire e greșită. Apasă „Citire greșită? Corectez eu”.'); return; }
+  const dealerZones = !!z.hd || Array.from({ length:N - 1 }, (_, i) => z[`o${i + 1}d`]).some(Boolean);
+  if (hole.join() !== V.holeKey){
+    V.holeKey = hole.join(); visionHand++; V.heroAgg = -1;
+    // fără buton dealer marcat, poziția ta avansează singură cu un loc la fiecare mână nouă
+    if (!dealerZones && vEl('vRot').checked && V.handsSeen++ > 0){ const e = vEl('vPos'); e.value = P[(P.indexOf(e.value) - 1 + N) % N]; visionPosLabels(); }
+  }
+  set('vHole', hole.join(' ')); set('vBoard', board.slice(0, n).join(' '));
+  const dealer = [R.hd].concat(Array.from({ length:N - 1 }, (_, i) => R[`o${i + 1}d`])).map(v => v === 'y');
+  if (dealer.filter(Boolean).length === 1){ set('vPos', P[(N - dealer.indexOf(true)) % N]); visionPosLabels(); }
+  const stack = z.hs ? R.hs : R.kStack;
+  set('vStack', stack); if (R.hb !== undefined) set('vBet', R.hb || 0);
+  let betZones = !!z.hb;
+  for (let i = 1; i < N; i++){
+    if (z[`o${i}s`]) set('vS' + i, R[`o${i}s`]); else set('vS' + i, stack);        // stack necunoscut: îl consider egal cu al tău
+    if (z[`o${i}b`]){ betZones = true; if (R[`o${i}b`] !== undefined) set('vB' + i, R[`o${i}b`] || 0); }
+    if (R[`o${i}c`]) set('vIn' + i, R[`o${i}c`] === 'y');
+  }
+  // fără pariuri citite pe jucători, suma de plătit vine de pe butonul „Call"
+  if (!betZones){ const cv = R.kCall == null ? '' : String(R.kCall); if (V.applied.vCall !== cv){ V.applied.vCall = cv; vEl('vCall').value = cv; } }
+  const val = id => Number(vEl(id).value) || 0, bets = [val('vBet')]; for (let i = 1; i < N; i++) bets.push(val('vB' + i));
+  const pot = z.pot ? R.pot : R.kPot;
+  if (pot != null) set('vPot', VD().potIncl ? pot : pot + bets.reduce((a, b) => a + b, 0));
+  // dacă pariul tău e cel mai mare de pe stradă, tu ești agresorul: contează pe strada următoare
+  const street = n ? n - 2 : 0;
+  if (bets[0] > (street ? 0 : val('vBB')) && bets[0] >= Math.max(...bets)) V.heroAgg = street;
+  if (betZones) set('vIAgg', street > 0 && V.heroAgg === street - 1);
+  const turn = z.turn ? (R.turn === 'n' ? false : R.turn === 'y' ? true : null) : R.kTurn;
+  V.turn = turn === undefined ? null : turn;
+  visionStatus(`Captură activă · mâna ta ${hole.join(' ')}${n ? ' · masa ' + board.slice(0, n).join(' ') : ''}${visionOCROff ? ' · textul de pe masă nu poate fi citit (fără internet): completează tu potul și suma de plătit' : ''}`);
+  visionAuto();
+}
+
+/* --- învățarea: ce nu recunoaște, întreabă o singură dată --- */
+const VQ = k => k === 'turn' ? 'E rândul tău acum (se văd butoanele de acțiune)?' : k === 'hd' ? 'Butonul dealer e la tine acum?' : /c$/.test(k) ? `Adversarul ${k[1]} mai e în mână (are cărți)?` : `Butonul dealer e la adversarul ${k[1]} acum?`;
+function visionRenderLearn(){
+  const items = [...V.pending.values()], sig = items.map(p => p.id).join(',');
+  if (sig === V.learnSig) return; V.learnSig = sig;
+  const box = vEl('visionLearn'); box.hidden = !items.length;
+  box.innerHTML = '<h2>Ajută-mă o singură dată</h2>' + items.slice(0, 8).map(p => p.kind === 'card'
+    ? `<div class="vl" data-k="${p.k}"><img src="${p.img}" alt="Zona decupată"><input placeholder="ex. Ah" maxlength="3" autocomplete="off" aria-label="Ce carte este?"><button class="btn ghost" type="button" data-a="ok">OK</button><button class="btn ghost" type="button" data-a="-">Nicio carte aici</button></div>`
+    : `<div class="vl" data-k="${p.k}"><img src="${p.img}" alt="Zona decupată"><span>${VQ(p.k)}</span><button class="btn ghost" type="button" data-a="y">Da</button><button class="btn ghost" type="button" data-a="n">Nu</button></div>`).join('');
+}
+function visionTeach(k, label){
+  const p = V.pending.get(k); if (!p) return;
+  const pool = VD().tpl[p.pool] = VD().tpl[p.pool] || [];
+  pool.push({ l:label, f:visionEnc(p.f) }); if (pool.length > 400) pool.shift();
+  for (const [kk, q] of [...V.pending]) if (q.pool === p.pool && visionDist(q.f, p.f) < VT){ V.read[kk] = label; V.pending.delete(kk); }
+  save(); visionRenderLearn(); visionApply();
+}
+function visionLearnAct(row, a){
+  const k = row.dataset.k;
+  if (a === 'ok'){
+    const inp = row.querySelector('input'), c = visionCards(inp.value);
+    if (c.cards.length !== 1 || c.bad.length){ inp.value = ''; inp.placeholder = 'ex. Ah, Td, 7c'; inp.focus(); return; }
+    visionTeach(k, cardLbl(c.cards[0]));
+  } else visionTeach(k, a);
+}
+vEl('visionLearn').addEventListener('click', e => { const b = e.target.closest('button'); if (b) visionLearnAct(b.closest('.vl'), b.dataset.a); });
+vEl('visionLearn').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') visionLearnAct(e.target.closest('.vl'), 'ok'); });
+vEl('visionRelearn').addEventListener('click', () => {
+  // uită corecturile care au produs citirea de acum și te întreabă pe tine ce cărți se văd
+  const tpl = VD().tpl;
+  Object.values(V.match).forEach(t => { Object.keys(tpl).forEach(pool => { const i = tpl[pool].indexOf(t); if (i >= 0) tpl[pool].splice(i, 1); }); });
+  save(); visionResetReads(); V.askAll = true; visionStatus('Spune-mi tu ce cărți se văd acum; le țin minte așa.');
+});
+
+/* --- marcarea zonelor pe o fotografie a mesei --- */
+let vcalSel = 'h1', vcalDrag = null, vcalZoom = 1;
+function vcalDraw(){
+  const cv = vEl('vcalCanvas'), g = cv.getContext('2d'), z = VD().zones, k = cv.width / Math.max(1, cv.clientWidth);
+  g.drawImage(V.calImg, 0, 0);
+  g.font = `${Math.round(12 * k)}px sans-serif`; g.lineWidth = Math.max(1, 1.5 * k); g.textBaseline = 'bottom';
+  const rect = (r, col, name) => {
+    const x = r[0] * cv.width, y = r[1] * cv.height, w = r[2] * cv.width, h = r[3] * cv.height;
+    g.strokeStyle = col; g.strokeRect(x, y, w, h);
+    if (name){ const tw = g.measureText(name).width + 6 * k; g.fillStyle = col; g.fillRect(x, y - 15 * k, tw, 15 * k); g.fillStyle = '#0c1512'; g.fillText(name, x + 3 * k, y - 1 * k); }
+  };
+  visionZoneList().forEach(([id, name]) => {
+    if (!z[id]) return;
+    rect(z[id], id === vcalSel ? '#dcae55' : '#86d6a1', name.replace(/ \(.*/, ''));
+    if (id === 'board') for (let i = 1; i < 5; i++){ g.beginPath(); g.moveTo((z[id][0] + z[id][2] * i / 5) * cv.width, z[id][1] * cv.height); g.lineTo((z[id][0] + z[id][2] * i / 5) * cv.width, (z[id][1] + z[id][3]) * cv.height); g.stroke(); }
+  });
+  if (vcalDrag) rect([Math.min(vcalDrag.x0, vcalDrag.x1), Math.min(vcalDrag.y0, vcalDrag.y1), Math.abs(vcalDrag.x1 - vcalDrag.x0), Math.abs(vcalDrag.y1 - vcalDrag.y0)], '#e8b04f');
+}
+function vcalChips(){
+  const z = VD().zones;
+  vEl('vcalZones').innerHTML = visionZoneList().map(([id, name]) => `<button type="button" class="chip" data-z="${id}" aria-pressed="${id === vcalSel}">${z[id] ? '✓ ' : ''}${esc(name)}</button>`).join('');
+}
+function vcalSnap(){
+  const frame = visionGrab(); if (!frame) return false;
+  const c = V.calImg || (V.calImg = document.createElement('canvas')); c.width = frame.width; c.height = frame.height; c.getContext('2d').drawImage(frame, 0, 0);
+  const cv = vEl('vcalCanvas'); cv.width = c.width; cv.height = c.height; cv.style.width = vcalZoom * 100 + '%';
+  return true;
+}
+vEl('visionCal').addEventListener('click', () => {
+  if (!vcalSnap()){ visionStatus('Încă nu am o imagine din captură. Încearcă din nou într-o secundă.'); return; }
+  if (!V.zonesOK) VD().zones = {};                                  // zonele vechi erau pentru altă fereastră
+  VD().zAspect = V.calImg.width / V.calImg.height; V.zonesOK = true; save();
+  V.calOpen = true; vEl('visionCalBox').hidden = false;
+  const first = visionZoneList().find(([id]) => !VD().zones[id]); vcalSel = first ? first[0] : 'h1';
+  vcalChips(); vcalDraw();
+});
+vEl('vcalZones').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; vcalSel = b.dataset.z; vcalChips(); vcalDraw(); });
+vEl('vcalZoom').addEventListener('click', () => { vcalZoom = vcalZoom >= 4 ? 1 : vcalZoom * 2; vEl('vcalCanvas').style.width = vcalZoom * 100 + '%'; vEl('vcalZoom').textContent = vcalZoom >= 4 ? 'Micșorează' : 'Mărește ×2'; vcalDraw(); });
+vEl('vcalDel').addEventListener('click', () => { delete VD().zones[vcalSel]; save(); vcalChips(); vcalDraw(); });
+vEl('vcalSnap').addEventListener('click', () => { if (vcalSnap()) vcalDraw(); });
+vEl('vcalDone').addEventListener('click', () => { V.calOpen = false; vEl('visionCalBox').hidden = true; visionResetReads(); });
+(() => {
+  const cv = vEl('vcalCanvas'), at = e => { const b = cv.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)), Math.max(0, Math.min(1, (e.clientY - b.top) / b.height))]; };
+  cv.addEventListener('pointerdown', e => { const [x, y] = at(e); vcalDrag = { x0:x, y0:y, x1:x, y1:y }; cv.setPointerCapture(e.pointerId); e.preventDefault(); });
+  cv.addEventListener('pointermove', e => { if (!vcalDrag) return; [vcalDrag.x1, vcalDrag.y1] = at(e); vcalDraw(); });
+  cv.addEventListener('pointerup', e => {
+    if (!vcalDrag) return; [vcalDrag.x1, vcalDrag.y1] = at(e);
+    const r = [Math.min(vcalDrag.x0, vcalDrag.x1), Math.min(vcalDrag.y0, vcalDrag.y1), Math.abs(vcalDrag.x1 - vcalDrag.x0), Math.abs(vcalDrag.y1 - vcalDrag.y0)];
+    vcalDrag = null;
+    if (r[2] > .004 && r[3] > .004){
+      VD().zones[vcalSel] = r.map(v => Math.round(v * 1e5) / 1e5); save();
+      const list = visionZoneList(), i = list.findIndex(([id]) => id === vcalSel), next = list.slice(i + 1).find(([id]) => !VD().zones[id]);
+      if (next) vcalSel = next[0];
+    }
+    vcalChips(); vcalDraw();
+  });
+})();
+
+/* --- butoanele și formularul --- */
+vEl('visionStart').addEventListener('click', visionStart);
+vEl('visionStop').addEventListener('click', visionStop);
+vEl('visionAnalyze').addEventListener('click', () => { visionSig = visionFormSig(); visionAnalyzeNow(); });
+vEl('visionForm').addEventListener('input', e => {
+  if (e.target.id === 'vN'){ visionBuildForm(); VD().n = +vEl('vN').value; save(); visionResetReads(); }
+  if (e.target.id === 'vPos') visionPosLabels();
+  if (e.target.id === 'vPotIncl'){ VD().potIncl = e.target.checked; save(); delete V.applied.vPot; }
+  if (e.target.id === 'vBB'){ VD().bb = Number(e.target.value) || 10; save(); }
+  if (e.target.id === 'vRot'){ VD().rot = e.target.checked; save(); }
+  visionAuto();
+});
+vEl('visionReset').addEventListener('click', () => {
+  visionMode = false; S = null; advice = null; adviceKey = ''; pend = null; visionSig = ''; visionHand++; clearTimeout(visionAutoT);
+  vEl('vHole').value = ''; vEl('vBoard').value = ''; vEl('vPot').value = '0'; vEl('vBet').value = '0'; vEl('vCall').value = ''; vEl('vIAgg').checked = false;
+  document.querySelectorAll('#vOpps input').forEach(i => { if (i.type === 'checkbox') i.checked = true; else if (/^vB/.test(i.id)) i.value = '0'; });
+  V.applied = {}; V.holeKey = '';
+  vEl('visionAdvice').hidden = true; vEl('visionValidation').textContent = 'Date resetate.';
+  renderNow(); if (D.mode === 'local') localWaiting('Aștept jocul…');
+});
+vEl('visionForget').addEventListener('click', () => { VD().tpl = {}; vDecCache.clear(); save(); visionResetReads(); vEl('visionValidation').textContent = 'Am șters tot ce învățasem despre cum arată cărțile.'; });
+vEl('visionUnzone').addEventListener('click', () => { VD().zones = {}; save(); visionResetReads(); vEl('visionValidation').textContent = 'Am șters zonele marcate.'; });
+function visionInit(){
+  const v = VD();
+  if (v.n >= 2 && v.n <= 6) vEl('vN').value = v.n;
+  if (v.bb > 0) vEl('vBB').value = v.bb;
+  vEl('vPotIncl').checked = v.potIncl !== false;
+  vEl('vRot').checked = v.rot !== false;
+  visionBuildForm();
+}
+window.addEventListener('beforeunload', visionStop);
+
+/* ---------- Jarvis Vision automat: găsește și citește cărțile singur, fără zone marcate, fără AI, fără învățare ----------
+   1. Găsirea: o carte este o suprafață de culoare uniformă, dreptunghiulară, mai înaltă decât lată. Cele trei-cinci
+      aliniate pe un rând sunt cărțile comune; perechea alăturată este mâna ta.
+   2. Citirea: pe fața cărții, semnul din stânga-sus este rangul, iar celălalt este culoarea. Fiecare se compară cu
+      aceleași semne desenate cu fonturile calculatorului, indiferent de mărime. */
+const AUTO_RANKS = [['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['T','10'],['T','T'],['J','J'],['Q','Q'],['K','K'],['A','A']];
+const AUTO_SUITS = [['s','♠'],['h','♥'],['d','♦'],['c','♣']];
+const AUTO_FONTS = window.__JV_FONTS || ['Big Shoulders Display','IBM Plex Sans','IBM Plex Mono','Arial','Arial Black','Arial Narrow','Segoe UI','Verdana','Tahoma','Trebuchet MS','Calibri','Georgia','Times New Roman','Impact','Courier New','Roboto','Roboto Condensed','Noto Sans','Helvetica','sans-serif','serif','monospace'];
+const AUTO_SFONTS = window.__JV_SFONTS || ['IBM Plex Sans','Segoe UI Symbol','Arial','Segoe UI','Times New Roman','Arial Unicode MS','Noto Sans Symbols','Noto Sans Symbols 2','Roboto','sans-serif','serif'];
+const GW = 16, GH = 24;
+let autoTpl = null;
+// Aduce un semn (masca lui, decupată strâns) la 16×24, ca să poată fi comparat indiferent de mărime.
+function autoNorm(mask, W, x0, y0, w, h){
+  const out = new Float32Array(GW * GH);
+  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++){
+    const xa = x0 + gx * w / GW, xb = x0 + (gx + 1) * w / GW, ya = y0 + gy * h / GH, yb = y0 + (gy + 1) * h / GH;
+    let s = 0, n = 0;
+    for (let y = Math.floor(ya); y < Math.max(Math.floor(ya) + 1, Math.ceil(yb)); y++) for (let x = Math.floor(xa); x < Math.max(Math.floor(xa) + 1, Math.ceil(xb)); x++){ s += mask[y * W + x]; n++; }
+    out[gy * GW + gx] = s / n;
+  }
+  return out;
+}
+function autoGlyph(text, font, weight){
+  const S = 96, c = document.createElement('canvas'); c.width = S * 2.4; c.height = S * 1.8;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#000'; g.font = `${weight} ${S}px "${font}"`; g.textBaseline = 'middle'; g.fillText(text, S * .3, S * .9);
+  const d = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height, mask = new Uint8Array(W * H);
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let i = 0; i < W * H; i++) if (d[i * 4] < 128){ mask[i] = 1; const x = i % W, y = (i / W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  return { f:autoNorm(mask, W, x0, y0, w, h), asp:w / h };
+}
+// Fonturile web (cele ale jocului Masa de Poker) trebuie încărcate înainte de a desena mostrele cu ele.
+async function autoLoadFonts(){
+  try { await Promise.all(AUTO_FONTS.concat(AUTO_SFONTS).flatMap(f => ['800', '400'].map(w => document.fonts.load(`${w} 48px "${f}"`, '10JQKA♠♥♦♣').catch(() => {})))); } catch (e) {}
+  autoTpl = null;
+}
+function autoBuildTpl(){
+  const ranks = [], suits = [], seen = new Set();
+  const add = (list, label, text, font, weight) => {
+    const t = autoGlyph(text, font, weight); if (!t) return;
+    const key = label + Array.from(t.f, v => v > .5 ? 1 : 0).join('');     // fonturile lipsă cad pe același font implicit: nu le dublez
+    if (seen.has(key)) return; seen.add(key); list.push({ l:label, f:t.f, asp:t.asp });
+  };
+  for (const font of AUTO_FONTS) for (const wt of ['800', 'bold', 'normal']) for (const [l, text] of AUTO_RANKS) add(ranks, l, text, font, wt);
+  for (const font of AUTO_SFONTS) for (const [l, text] of AUTO_SUITS) add(suits, l, text, font, 'normal');
+  autoTpl = { ranks, suits };
+}
+function autoMatch(list, f, asp){
+  const best = {};
+  for (const t of list){
+    let d = 0; for (let i = 0; i < GW * GH; i++) d += Math.abs(t.f[i] - f[i]);
+    const s = 1 - d / (GW * GH) - .08 * Math.min(1, Math.abs(Math.log(asp / t.asp)));   // lățimea contează puțin: există fonturi înguste
+    if (!(best[t.l] >= s)) best[t.l] = s;
+  }
+  return Object.entries(best).sort((a, b) => b[1] - a[1]);     // [[etichetă, scor], ...] de la cel mai bun
+}
+// Citește o carte dintr-un dreptunghi al cadrului. Întoarce de ex. "Ah"; "-" dacă acolo nu e nicio carte; null dacă nu e sigur.
+function autoReadCard(frame, r){
+  if (!autoTpl) autoBuildTpl();
+  const [x, y, w, h] = vPx(frame, r), H = 132, W = Math.max(24, Math.round(w * H / h));
+  const c = autoReadCard.c || (autoReadCard.c = document.createElement('canvas')); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.imageSmoothingQuality = 'high'; g.drawImage(frame, x, y, w, h, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, n = W * H;
+  // culoarea feței = culoarea cea mai frecventă
+  const hist = new Uint32Array(4096); let fk = 0;
+  for (let i = 0; i < n; i++){ const k = (d[i * 4] >> 4 << 8) | (d[i * 4 + 1] >> 4 << 4) | (d[i * 4 + 2] >> 4); if (++hist[k] > hist[fk]) fk = k; }
+  let fr = 0, fg = 0, fb = 0, fn = 0;
+  for (let i = 0; i < n; i++){ const k = (d[i * 4] >> 4 << 8) | (d[i * 4 + 1] >> 4 << 4) | (d[i * 4 + 2] >> 4); if (k === fk){ fr += d[i * 4]; fg += d[i * 4 + 1]; fb += d[i * 4 + 2]; fn++; } }
+  if (fn < n * .25) return '-';                                    // nu e o față de carte (spate cu model)
+  fr /= fn; fg /= fn; fb /= fn;
+  const mask = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if (Math.max(Math.abs(d[i * 4] - fr), Math.abs(d[i * 4 + 1] - fg), Math.abs(d[i * 4 + 2] - fb)) > 70) mask[i] = 1;
+  // o margine a cărții acoperită de altceva (o plăcuță cu nume, o altă carte): șterg fâșia, ca să nu se lipească de semne
+  const rowInk = yy => { let v = 0; for (let xx = 0; xx < W; xx++) v += mask[yy * W + xx]; return v / W; }, colInk = xx => { let v = 0; for (let yy = 0; yy < H; yy++) v += mask[yy * W + xx]; return v / H; };
+  for (let yy = 0; yy < H * .25 && (rowInk(yy) > .5 || (yy > 0 && rowInk(yy - 1) > .5)); yy++) mask.fill(0, yy * W, (yy + 1) * W);
+  for (let yy = H - 1; yy > H * .75 && (rowInk(yy) > .5 || (yy < H - 1 && rowInk(yy + 1) > .5)); yy--) mask.fill(0, yy * W, (yy + 1) * W);
+  for (const [a, b, st2] of [[0, W * .25, 1], [W - 1, W * .75, -1]]){ let prev = false; for (let xx = a; st2 > 0 ? xx < b : xx > b; xx += st2){ const full = colInk(xx) > .5; if (!full && !prev) break; for (let yy = 0; yy < H; yy++) mask[yy * W + xx] = 0; prev = full; } }
+  // componentele de „cerneală" (semnele desenate pe carte)
+  const lab = new Int32Array(n), comps = [], st = new Int32Array(n);
+  for (let i = 0; i < n; i++){
+    if (!mask[i] || lab[i]) continue;
+    let sp = 0, cnt = 0, x0 = W, y0 = H, x1 = 0, y1 = 0, sr = 0, sg = 0, sb = 0; const id = comps.length + 1; st[sp++] = i; lab[i] = id;
+    while (sp){
+      const p = st[--sp], px = p % W, py = (p / W) | 0; cnt++; sr += d[p * 4]; sg += d[p * 4 + 1]; sb += d[p * 4 + 2];
+      if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+        const qx = px + dx, qy = py + dy; if (qx < 0 || qy < 0 || qx >= W || qy >= H) continue;
+        const q = qy * W + qx; if (mask[q] && !lab[q]){ lab[q] = id; st[sp++] = q; }
+      }
+    }
+    comps.push({ id, cnt, x0, y0, x1, y1, w:x1 - x0 + 1, h:y1 - y0 + 1, r:sr / cnt, g:sg / cnt, b:sb / cnt, edge:x0 === 0 || y0 === 0 || x1 === W - 1 || y1 === H - 1 });
+  }
+  // semnele adevărate nu ating marginea și nu sunt firimituri
+  const glyphs = comps.filter(k => !k.edge && k.h >= 11 && k.cnt >= 24 && k.h <= H * .8);
+  if (!glyphs.length) return '-';                                  // suprafață goală: nicio carte aici
+  const feat = list => {
+    const x0 = Math.min(...list.map(k => k.x0)), y0 = Math.min(...list.map(k => k.y0)), x1 = Math.max(...list.map(k => k.x1)), y1 = Math.max(...list.map(k => k.y1));
+    const ids = new Set(list.map(k => k.id)), m = new Uint8Array(n);
+    for (let yy = y0; yy <= y1; yy++) for (let xx = x0; xx <= x1; xx++) if (ids.has(lab[yy * W + xx])) m[yy * W + xx] = 1;
+    return { f:autoNorm(m, W, x0, y0, x1 - x0 + 1, y1 - y0 + 1), asp:(x1 - x0 + 1) / (y1 - y0 + 1) };
+  };
+  // rangul: semnul cel mai din stânga-sus, plus vecinul lipit de el pe același rând (cazul „10")
+  const first = glyphs.slice().sort((a, b) => (a.x0 + a.y0 * 1.2) - (b.x0 + b.y0 * 1.2))[0], rankSet = [first];
+  for (const k of glyphs){
+    if (k === first) continue;
+    const ov = Math.min(k.y1, first.y1) - Math.max(k.y0, first.y0) + 1;
+    if (ov >= .6 * Math.min(k.h, first.h) && k.x0 > first.x0 && k.x0 - first.x1 <= .45 * first.h && Math.abs(k.h - first.h) <= .3 * first.h) rankSet.push(k);
+  }
+  const rf = feat(rankSet), rm = autoMatch(autoTpl.ranks, rf.f, rf.asp);
+  const rgap = rm.length > 1 ? rm[0][1] - rm[1][1] : 1;
+  if (!rm.length || !((rm[0][1] >= .7 && rgap >= .015) || (rm[0][1] >= .58 && rgap >= .03))) return null;
+  // culoarea: semnul de sub rang sau cel mai mare semn rămas; aleg varianta care seamănă cel mai bine cu ♠ ♥ ♦ ♣
+  const rest = glyphs.filter(k => !rankSet.includes(k) && k.w / k.h > .45 && k.w / k.h < 1.7 && !(k.y0 > H * .6 && k.x0 > W * .5));
+  if (!rest.length) return null;
+  const rx0 = Math.min(...rankSet.map(k => k.x0)), rx1 = Math.max(...rankSet.map(k => k.x1)), ry1 = Math.max(...rankSet.map(k => k.y1));
+  const below = rest.filter(k => k.y0 >= ry1 - 2 && k.x0 <= rx1 && k.x1 >= rx0).sort((a, b) => a.y0 - b.y0)[0];
+  const biggest = rest.slice().sort((a, b) => b.cnt - a.cnt)[0];
+  const sat = (fr + fg + fb) / 3, faceHue = Math.max(fr, fg, fb) - Math.min(fr, fg, fb) > 60 ? (fr > fg && fr > fb ? 'h' : fb > fr && fb > fg ? 'd' : fg > fr && fg > fb ? 'c' : '') : (sat < 90 ? 's' : '');
+  let bestS = null;
+  for (const k of new Set([below, biggest].filter(Boolean))){
+    const sf = feat([k]); let m = autoMatch(autoTpl.suits, sf.f, sf.asp);
+    const red = k.r > k.g + 60 && k.r > k.b + 60, blue = k.b > k.r + 50 && k.b > k.g + 20, green = k.g > k.r + 40 && k.g > k.b + 40;
+    const mono = Math.max(k.r, k.g, k.b) - Math.min(k.r, k.g, k.b) < 40;
+    m = m.map(([l, s]) => {
+      if (red && (l === 's' || l === 'c')) s -= .5;                        // pica și trefla nu sunt niciodată roșii
+      if (mono && !faceHue && (l === 'h' || l === 'd')) s -= .5;           // pe o carte albă, cupa și caroul nu sunt negre
+      if (blue && l === 'd') s += .06; if (green && l === 'c') s += .06;   // pachet în patru culori
+      if (green && (l === 's' || l === 'h' || l === 'd')) s -= .3; if (blue && (l === 's' || l === 'h' || l === 'c')) s -= .3;
+      if (mono && faceHue && l === faceHue) s += .06;                      // carte colorată integral, cu semn alb
+      return [l, s];
+    }).sort((a, b) => b[1] - a[1]);
+    // pica și trefla seamănă mult ca formă; diferența sigură e vârful: pica e ascuțită sus, trefla are un lob rotund
+    if (m[0][0] + m[1][0] === 'sc' || m[0][0] + m[1][0] === 'cs'){
+      const rowW = r => { let v = 0; for (let i = 0; i < GW; i++) v += sf.f[r * GW + i]; return v / GW; };
+      const dark = mono && k.r + k.g + k.b < 400 && !faceHue;
+      // lobul de sus al treflei are aceeași lățime pe mai multe rânduri; pica se lărgește continuu spre bază.
+      // Culoarea are prioritate: semn verde sau carte verde = treflă; într-un pachet în patru culori, semnul negru e pică.
+      const pick = (green || faceHue === 'c') ? 'c' : (faceHue === 's' || (dark && autoReadCard.four)) ? 's' : rowW(5) - rowW(3) < .075 ? 'c' : 's';
+      m = m.map(([l, s]) => [l, l === pick ? Math.max(m[0][1], m[1][1]) + .05 : (l === 's' || l === 'c') ? Math.min(m[0][1], m[1][1]) - .05 : s]).sort((a, b) => b[1] - a[1]);
+    }
+    if (!bestS || m[0][1] > bestS[0][1]){ bestS = m; bestS.color = (green || blue) && !faceHue; }
+  }
+  if (!bestS || bestS[0][1] < .62 || bestS[0][1] - bestS[1][1] < .02) return null;
+  if (bestS.color) autoReadCard.four = true;
+  return rm[0][0] + bestS[0][0];
+}
+// Găsește cărțile întoarse cu fața în sus. Întoarce { hero:[r, r] | null, board:[r, ...] } cu dreptunghiuri relative la cadru.
+function autoFindCards(frame){
+  const W = Math.min(960, frame.width), s = W / frame.width, H = Math.round(frame.height * s);
+  const c = autoFindCards.c || (autoFindCards.c = document.createElement('canvas')); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(frame, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, n = W * H, lab = new Int32Array(n), st = new Int32Array(n), cand = [], buttons = [];
+  let id = 0;
+  for (let i = 0; i < n; i++){
+    if (lab[i]) continue;
+    const r0 = d[i * 4], g0 = d[i * 4 + 1], b0 = d[i * 4 + 2];
+    let sp = 0, cnt = 0, x0 = W, y0 = H, x1 = 0, y1 = 0; id++; st[sp++] = i; lab[i] = id;
+    while (sp){
+      const p = st[--sp], px = p % W, py = (p / W) | 0, pr = d[p * 4], pg = d[p * 4 + 1], pb = d[p * 4 + 2]; cnt++;
+      if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+      for (let k = 0; k < 4; k++){
+        const qx = px + (k === 0 ? 1 : k === 1 ? -1 : 0), qy = py + (k === 2 ? 1 : k === 3 ? -1 : 0);
+        if (qx < 0 || qy < 0 || qx >= W || qy >= H) continue;
+        const q = qy * W + qx; if (lab[q]) continue;
+        const qr = d[q * 4], qg = d[q * 4 + 1], qb = d[q * 4 + 2];
+        // aceeași suprafață: aproape de vecin (permite un degradeu fin) și nu prea departe de culoarea de pornire
+        if (Math.abs(qr - pr) < 7 && Math.abs(qg - pg) < 7 && Math.abs(qb - pb) < 7 && Math.abs(qr - r0) < 20 && Math.abs(qg - g0) < 20 && Math.abs(qb - b0) < 20){ lab[q] = id; st[sp++] = q; }
+      }
+    }
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    // butoanele de acțiune: dreptunghiuri late, de culoare uniformă, cu text, în partea de jos a mesei
+    if (y0 > H * .5 && bh >= H * .03 && bh <= H * .13 && bw >= W * .045 && bw / bh >= 1.3 && bw / bh <= 7 && cnt >= bw * bh * .6 && cnt <= bw * bh * .97 && buttons.length < 8)
+      buttons.push([x0 / W, y0 / H, bw / W, bh / H]);
+    if (bh < 24 || bh > H * .4 || bw < 12 || bw / bh < .2 || bw / bh > 1.9 || cnt < bw * bh * .35 || cnt > bw * bh * .985) continue;
+    // fața unei cărți își umple conturul: verific cele patru laturi ale dreptunghiului
+    const side = (xa, ya, xb, yb) => { let on = 0, tot = 0; for (let yy = ya; yy <= yb; yy++) for (let xx = xa; xx <= xb; xx++){ tot++; if (lab[yy * W + xx] === id) on++; } return on / tot; };
+    const m = Math.max(1, Math.round(bh * .03));
+    // cel puțin trei laturi pline: un colț poate fi acoperit de altceva (o plăcuță cu numele, un jeton)
+    if ([side(x0, y0 + m, x1, y0 + m), side(x0, y1 - m, x1, y1 - m), side(x0 + m, y0, x0 + m, y1), side(x1 - m, y0, x1 - m, y1)].filter(v => v >= .6).length < 3) continue;
+    // o literă mare seamănă cu o carte, dar golurile ei sunt deschise spre exterior; semnele de pe o carte sunt închise în fața ei
+    let open = 0, sp2 = 0; const seen = new Uint8Array(bw * bh);
+    const push = (xx, yy) => { const li = (yy - y0) * bw + (xx - x0); if (!seen[li] && lab[yy * W + xx] !== id){ seen[li] = 1; st[sp2++] = li; } };
+    for (let xx = x0; xx <= x1; xx++){ push(xx, y0); push(xx, y1); } for (let yy = y0; yy <= y1; yy++){ push(x0, yy); push(x1, yy); }
+    while (sp2){ const li = st[--sp2], lx = li % bw, ly = (li / bw) | 0; open++;
+      if (lx > 0) push(x0 + lx - 1, y0 + ly); if (lx < bw - 1) push(x0 + lx + 1, y0 + ly); if (ly > 0) push(x0 + lx, y0 + ly - 1); if (ly < bh - 1) push(x0 + lx, y0 + ly + 1); }
+    if (open > bw * bh * .3) continue;
+    if (bw / bh <= .95){ cand.push({ x:x0, y:y0, w:bw, h:bh }); continue; }
+    // prea lat pentru o carte: pot fi două cărți suprapuse, de aceeași culoare. Le despart după al doilea rang de sus.
+    const ya = y0 + Math.round(bh * .05), yb = y0 + Math.round(bh * .3), runs = []; let run = null;
+    for (let xx = x0 + 1; xx < x1; xx++){
+      let ink = 0; for (let yy = ya; yy <= yb; yy++) if (lab[yy * W + xx] !== id) ink++;
+      if (ink){ if (run && xx - run[1] <= bh * .12) run[1] = xx; else runs.push(run = [xx, xx]); }
+    }
+    if (runs.length === 2 && runs[1][0] - runs[0][1] > bh * .15){
+      const cut = runs[1][0] - (runs[0][0] - x0);               // a doua carte începe la fel de departe de rangul ei ca prima
+      if (cut - x0 >= bh * .2 && x1 - cut >= bh * .35){ cand.push({ x:x0, y:y0, w:cut - x0, h:bh }, { x:cut, y:y0, w:x1 - cut + 1, h:bh }); }
+    }
+  }
+  // rânduri de cărți: aceeași înălțime, aceeași linie
+  cand.sort((a, b) => a.x - b.x);
+  const rows = [];
+  for (const k of cand){
+    const row = rows.find(R => Math.abs(R[0].h - k.h) <= .15 * k.h && Math.abs(R[0].y - k.y) <= .2 * k.h && k.x - (R[R.length - 1].x + R[R.length - 1].w) < 1.6 * k.h);
+    if (row) row.push(k); else rows.push([k]);
+  }
+  const rel = k => [k.x / W, k.y / H, k.w / W, k.h / H].map(v => Math.round(v * 1e5) / 1e5);
+  return { pairs:rows.filter(R => R.length === 2).map(R => R.map(rel)), rows:rows.filter(R => R.length >= 3 && R.length <= 5).map(R => R.map(rel)), found:cand.length, buttons };
+}
+// Din perechile și rândurile găsite le alege pe cele care chiar sunt cărți (se pot citi). read(r) întoarce eticheta, "-" sau null.
+function autoPick(fc, read){
+  const score = L => L.filter(l => l && l !== '-').length, cx = R => (R[0][0] + R[R.length - 1][0] + R[R.length - 1][2]) / 2, cy = R => R[0][1] + R[0][3] / 2;
+  const rows = fc.rows.map(R => ({ R, L:R.map(read) })).filter(o => score(o.L) >= 2).sort((a, b) => score(b.L) - score(a.L) || Math.abs(cy(a.R) - .45) - Math.abs(cy(b.R) - .45));
+  const at = autoFindCards.hero;
+  const pairs = fc.pairs.map(R => ({ R, L:R.map(read) })).filter(o => score(o.L) >= 1 && !o.L.includes('-'))
+    .sort((a, b) => at ? Math.hypot(cx(a.R) - at[0], cy(a.R) - at[1]) - Math.hypot(cx(b.R) - at[0], cy(b.R) - at[1]) : score(b.L) - score(a.L) || cy(b.R) - cy(a.R));
+  // prima dată iau perechea cea mai de jos; apoi rămân la locul unde am găsit-o (la showdown apar și alte perechi)
+  let hero = pairs[0] && (!at || Math.hypot(cx(pairs[0].R) - at[0], cy(pairs[0].R) - at[1]) < .12) ? pairs[0] : null;
+  // masa s-a mutat în fereastră (derulare, redimensionare): dacă de câteva cadre văd o singură pereche validă în alt loc, aceea e mâna ta
+  const full = pairs.filter(o => score(o.L) === 2);
+  autoPick.lost = !hero && at && full.length === 1 ? (autoPick.lost || 0) + 1 : 0;
+  if (autoPick.lost >= 4){ hero = full[0]; autoFindCards.hero = null; autoPick.lost = 0; }
+  if (hero && !autoFindCards.hero && score(hero.L) === 2) autoFindCards.hero = [cx(hero.R), cy(hero.R)];
+  return { hero, board:rows[0] || null };
+}
+// Textul unui buton: culoarea butonului devine alb, scrisul negru, apoi se citește ca un singur rând.
+function autoButtonImage(frame, r){
+  const [x, y, w, h] = vPx(frame, r), k = 56 / h, c = document.createElement('canvas'); c.width = Math.round(w * k) + 24; c.height = 80;
+  const g = c.getContext('2d', { willReadFrequently:true }); g.imageSmoothingQuality = 'high'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(frame, x, y, w, h, 12, 12, c.width - 24, 56);
+  const im = g.getImageData(12, 12, c.width - 24, 56), d = im.data, n = d.length / 4, hist = new Uint32Array(4096); let fk = 0;
+  for (let i = 0; i < n; i++){ const q = (d[i * 4] >> 4 << 8) | (d[i * 4 + 1] >> 4 << 4) | (d[i * 4 + 2] >> 4); if (++hist[q] > hist[fk]) fk = q; }
+  const fr = (fk >> 8) * 16 + 8, fg = ((fk >> 4) & 15) * 16 + 8, fb = (fk & 15) * 16 + 8;
+  for (let i = 0; i < n; i++){ const v = Math.max(Math.abs(d[i * 4] - fr), Math.abs(d[i * 4 + 1] - fg), Math.abs(d[i * 4 + 2] - fb)) > 64 ? 0 : 255; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+  g.putImageData(im, 12, 12);
+  return c;
+}
+
+function start(){
+  if (!D.mode) D.mode = LOCAL ? 'local' : 'online';
+  if (!LOCAL && D.mode === 'local') D.mode = 'online';
+  $('#modeSeg').hidden = !LOCAL;
+  if (/Android/.test(navigator.userAgent)){ const b = document.querySelector('#modeSeg [data-m="local"]'); if (b) b.textContent = 'Pe acest telefon'; }
+  visionInit();
+  renderProfiles(); renderLearn(); renderReview();
+  if (D.link) $('#cTable').value = D.link.code;
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('t')) $('#cTable').value = qs.get('t').toUpperCase().slice(0, 4);
+  applyMode(); connect();
+}
+// datele salvate pe disc au prioritate față de cele din browser
+if (LOCAL) fetch('/data/jarvis').then(r => r.ok ? r.json() : null).then(d => { if (d && typeof d === 'object' && Object.keys(d).length) Object.assign(D, d); }).catch(() => {}).then(start);
+else start();
+})();
+</script>
+</body>
+</html>

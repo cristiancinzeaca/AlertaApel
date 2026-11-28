@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Paginile jocului și ale lui Jarvis se iau direct din ../cod-sursa, la fel ca în construieste.ps1:
+//   masa-de-poker.html = joc/simulator.html ca document complet
+//   jarvis.html        = jarvis/jarvis.html cu online/shared.js pus în locul lui /*SHARED*/
+def src = new File(rootDir, '../cod-sursa')
+def genAssets = new File(buildDir, 'generated/jarvisAssets')
+def readUtf8 = { String rel ->
+    def t = new File(src, rel).getText('UTF-8')
+    t.startsWith('﻿') ? t.substring(1) : t
+}
+genAssets.mkdirs()
+def page = readUtf8('joc/simulator.html')
+int cut = page.indexOf('<div class="app">')
+if (cut < 0) throw new GradleException('simulator.html: nu găsesc <div class="app">')
+def doc = '<!DOCTYPE html>\n<html lang="ro">\n<head>\n<meta charset="utf-8">\n' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
+        page.substring(0, cut).stripTrailing() + '\n</head>\n<body>\n' + page.substring(cut).stripTrailing() + '\n</body>\n</html>\n'
+new File(genAssets, 'masa-de-poker.html').write(doc, 'UTF-8')
+new File(genAssets, 'jarvis.html').write(readUtf8('jarvis/jarvis.html').replace('/*SHARED*/', readUtf8('online/shared.js')), 'UTF-8')
+
+android {
+    namespace 'ro.masadepoker'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'ro.masadepoker'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // O cheie fixă: fiecare APK nou se instalează peste cel vechi și păstrează datele lui Jarvis.
+    signingConfigs {
+        debug {
+            storeFile file('masa-de-poker.keystore')
+            storePassword 'masadepoker'
+            keyAlias 'masadepoker'
+            keyPassword 'masadepoker'
+        }
+    }
+
+    buildTypes {
+        debug { signingConfig signingConfigs.debug }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    sourceSets {
+        main { assets.srcDirs += [genAssets] }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

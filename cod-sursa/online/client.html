@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Masa de Poker Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Masă ovală de postav cu până la 6 locuri, tu mereu jos; panou lateral cu masa, antrenorul, clasamentul, chatul și jurnalul. */
+:root{
+  --ink:#0c1512; --panel:#131f1b; --panel-2:#1a2a24; --line:rgba(236,230,214,.13);
+  --felt:#21664b; --felt-deep:#123b2c; --rail:#4b2f1c; --rail-hi:#7a5130;
+  --brass:#dcae55; --brass-soft:rgba(220,174,85,.18);
+  --cream:#ece6d6; --muted:#98aca1; --fold:#e0735c; --win:#86d6a1;
+  --card:#faf7ee; --card-edge:#d6cdb7; --back-a:#8a2f26; --back-b:#a23d31;
+  --suit-s:#1c1c1c; --suit-h:#c62f2a; --suit-d:#1d5cc0; --suit-c:#1b8247;
+  --log-h:#ef6f68; --log-d:#79a6f0; --log-c:#6fcf8f;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --cw:clamp(32px,8.2vw,56px); --cb:clamp(22px,6vw,38px); --cm:clamp(38px,10.5vw,58px);
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--cream);margin:0}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding-block:calc(18px + env(safe-area-inset-top,0px)) 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(32px,6vw,46px);line-height:.95;text-transform:uppercase}
+.brand h1 span{color:var(--brass)}
+.sub{margin:6px 0 0;color:var(--muted);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.top-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.codechip{font-family:var(--f-mono);font-size:15px;padding:6px 12px;border-radius:8px;border:1px dashed var(--brass);color:var(--brass);letter-spacing:.15em}
+.conn{font-size:12px;color:var(--fold)}
+/* lobby */
+.lobby{max-width:460px;margin:6vh auto 0;display:grid;gap:16px}
+.lobby .card-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px}
+.lobby label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.lobby input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--ink);font-size:16px}
+#codeIn{font-family:var(--f-mono);letter-spacing:.3em;text-transform:uppercase}
+.or{text-align:center;color:var(--muted);font-size:13px}
+.err{color:var(--fold);font-size:14px;margin:0;min-height:1.2em}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+.play{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* masa */
+.table{position:relative;width:100%;aspect-ratio:16/10;background:radial-gradient(ellipse at 50% 45%,var(--felt) 0%,var(--felt-deep) 80%);
+  border:14px solid var(--rail);border-radius:50%/50%;box-shadow:inset 0 0 0 2px var(--brass-soft),inset 0 0 70px rgba(0,0,0,.45),0 0 0 2px var(--rail-hi),0 22px 40px rgba(0,0,0,.45)}
+@media (max-width:620px){.table{aspect-ratio:3/4;border-width:8px;border-radius:46%/36%}}
+.seat{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;--c:var(--cb);max-width:36%}
+.seat.me{--c:var(--cm)}
+.seat.out{opacity:.45}
+.plate{position:relative;display:grid;justify-items:center;padding:3px 10px 4px;border-radius:10px;background:rgba(0,0,0,.5);border:1px solid var(--line);font-size:13px;line-height:1.25;min-width:72px;max-width:100%}
+.pl-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:center}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.pos{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.sty,.flags{font-size:11px;color:var(--muted)}
+.flag{display:inline-block;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:0 5px;border-radius:4px;border:1px solid currentColor;margin:1px 2px 0}
+.flag.coach{color:var(--brass)} .flag.off{color:var(--fold)}
+.stack{font-family:var(--f-mono);color:var(--brass);font-size:13px}
+.hud{font-family:var(--f-mono);font-size:10.5px;opacity:.8;white-space:nowrap}
+.dealer{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--cream);color:var(--ink);font-family:var(--f-display);font-weight:800;font-size:11px}
+.kick{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12px;line-height:1;cursor:pointer;padding:0}
+.seat.active .plate{border-color:var(--brass);box-shadow:0 0 0 3px var(--brass-soft)}
+.seat.winner .plate{border-color:var(--win);box-shadow:0 0 0 3px rgba(134,214,161,.25)}
+.tag{min-height:16px;font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;line-height:16px;white-space:nowrap}
+.tag.fold{color:var(--fold)} .tag.aggr{color:var(--brass)}
+.cards{display:flex;gap:3px;min-height:calc(var(--c)*1.4)}
+.card{width:var(--c);aspect-ratio:5/7;border-radius:calc(var(--c)*.12);background:var(--card);border:1px solid var(--card-edge);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:.9;box-shadow:0 3px 8px rgba(0,0,0,.35);font-family:var(--f-display);font-weight:800;animation:deal .28s ease-out both}
+.card .r{font-size:calc(var(--c)*.52)} .card .s{font-size:calc(var(--c)*.4);font-family:var(--f-body)}
+.card.s-s{color:var(--suit-s)} .card.s-h{color:var(--suit-h)} .card.s-d{color:var(--suit-d)} .card.s-c{color:var(--suit-c)}
+.card.back{background:repeating-linear-gradient(45deg,var(--back-a) 0 4px,var(--back-b) 4px 8px);border:2px solid var(--card)}
+.card.slot{background:transparent;border:1.5px dashed rgba(236,230,214,.2);box-shadow:none;animation:none}
+@keyframes deal{from{transform:translateY(-8px);opacity:.2}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+.betchip{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);z-index:1}
+.chips{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:13px;padding:1px 8px 1px 3px;border-radius:999px;background:rgba(0,0,0,.35);white-space:nowrap}
+.chips::before{content:"";width:15px;height:15px;border-radius:50%;background:var(--brass);border:3px dashed var(--cream);box-sizing:border-box}
+.center{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;--c:var(--cw)}
+.pot{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pot b{font-family:var(--f-mono);font-weight:500;font-size:16px;color:var(--brass);letter-spacing:0}
+.board{display:flex;gap:5px}
+.tablemsg{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);text-align:center;color:var(--cream);font-size:14px;max-width:70%;background:rgba(0,0,0,.35);padding:8px 14px;border-radius:10px}
+/* comenzi */
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.info{display:flex;flex-wrap:wrap;gap:8px;min-height:30px}
+.chip-i{font-size:13px;padding:4px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
+.chip-i b{font-family:var(--f-mono);font-weight:500}
+.chip-i.good{border-color:rgba(134,214,161,.45);color:var(--win)} .chip-i.bad{border-color:rgba(224,115,92,.45);color:var(--fold)} .chip-i.muted{color:var(--muted)}
+.timer{height:4px;border-radius:2px;background:var(--panel-2);overflow:hidden}
+.timer i{display:block;height:100%;background:var(--brass);transition:width .25s linear}
+.timer.low i{background:var(--fold)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{flex:1 1 120px;min-height:48px;padding:10px 16px;border-radius:10px;border:1px solid transparent;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.fold{background:transparent;border-color:var(--fold);color:var(--fold)}
+.btn.call{background:var(--cream);color:var(--ink)}
+.btn.raise{background:var(--brass);color:var(--ink)}
+.btn.ghost{flex:0 0 auto;min-height:38px;background:transparent;border-color:var(--line);color:var(--cream)}
+.btn.small{flex:0 0 auto;min-height:36px;padding:6px 12px;font-size:14px}
+.btn:not(:disabled):hover{filter:brightness(1.08)}
+kbd{font-family:var(--f-mono);font-size:11px;padding:1px 5px;border-radius:4px;border:1px solid currentColor;opacity:.6}
+@media (hover:none){kbd{display:none}}
+.sizing{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{flex:1 1 60px;min-height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font-size:13px;cursor:pointer}
+.slider-row{display:flex;gap:10px;align-items:center}
+.slider-row input[type=range]{flex:1;min-width:0;accent-color:var(--brass);height:28px}
+.slider-row input[type=number]{width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--ink);font-family:var(--f-mono);text-align:right}
+.wait{min-height:44px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--muted)}
+.res-title{margin:0;font-family:var(--f-display);font-weight:800;font-size:24px;text-transform:uppercase;line-height:1.1}
+.res-title.win{color:var(--win)} .res-title.lose{color:var(--fold)}
+.res-detail{margin:4px 0 0;color:var(--muted);font-size:14px}
+.coach{border:1px solid rgba(220,174,85,.45);background:var(--brass-soft);border-radius:10px;padding:10px 12px;display:grid;gap:6px;margin-bottom:10px}
+.coach-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.coach-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.coach-act{font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1.1}
+.coach-apply{margin-left:auto;min-height:34px;padding:4px 12px;border-radius:8px;border:1px solid var(--brass);background:transparent;color:var(--brass);font-weight:600;cursor:pointer}
+.coach ul{margin:0;padding-left:18px;font-size:13.5px} .coach li{margin:2px 0}
+/* panou lateral */
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.panel h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.field{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+.field select{padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--ink)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:10px;background:var(--ink);border:1px solid var(--line);margin-bottom:6px}
+.seg button{min-height:32px;border:0;border-radius:7px;background:transparent;font-size:13.5px;cursor:pointer;color:var(--muted)}
+.seg button[aria-checked="true"]{background:var(--brass);color:var(--ink);font-weight:600}
+.note{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.toggle{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:4px 0;cursor:pointer}
+.toggle input{accent-color:var(--brass);width:17px;height:17px;margin-top:2px;flex:none}
+.toggle.off{opacity:.45;cursor:not-allowed}
+.board-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.board-tbl th{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 0 6px}
+.board-tbl .n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.board-tbl td{padding:5px 0;border-top:1px solid var(--line)}
+.board-tbl small{color:var(--muted)}
+.pos-v{color:var(--win)} .neg-v{color:var(--fold)}
+.log,.chatlog{list-style:none;margin:0;padding:0;overflow-y:auto;font-size:12.5px;line-height:1.55}
+.log{max-height:300px;font-family:var(--f-mono);color:var(--muted)}
+.chatlog{max-height:200px;margin-bottom:8px}
+.chatlog b{color:var(--brass);font-weight:600}
+.log li,.chatlog li{padding:1px 0;overflow-wrap:anywhere}
+.log li.hd{color:var(--cream);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+.log li.win{color:var(--win)} .log li.st{color:var(--brass)}
+.log .h{color:var(--log-h)} .log .d{color:var(--log-d)} .log .c{color:var(--log-c)} .log .s{color:var(--cream)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.stats div{background:var(--panel-2);border-radius:9px;padding:8px 10px}
+.stats dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stats dd{margin:2px 0 0;font-family:var(--f-mono);font-size:15px;font-variant-numeric:tabular-nums}
+.chatform{display:flex;gap:8px}
+.chatform input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--ink)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Masa de <span>Poker</span></h1>
+      <p class="sub">No-Limit Hold'em online · până la 6 jucători · jetoane de joc, fără bani reali</p>
+    </div>
+    <div class="top-actions" id="topActions" hidden>
+      <span class="conn" id="conn" hidden>Se reconectează…</span>
+      <span class="codechip" id="codeChip" title="Codul mesei"></span>
+      <button class="btn ghost" id="copyLink" type="button">Copiază link-ul de invitație</button>
+      <button class="btn ghost" id="leaveBtn" type="button">Pleacă de la masă</button>
+    </div>
+  </header>
+
+  <section class="lobby" id="lobby">
+    <div class="card-box">
+      <label for="nameIn">Numele tău la masă</label>
+      <input id="nameIn" maxlength="16" autocomplete="nickname" placeholder="ex. Cristi">
+      <button class="btn raise" id="createBtn" type="button">Creează o masă nouă</button>
+      <p class="or">sau intră la masa unui prieten</p>
+      <label for="codeIn">Codul mesei</label>
+      <input id="codeIn" maxlength="4" autocomplete="off" placeholder="ABCD">
+      <button class="btn call" id="joinBtn" type="button">Intră la masă</button>
+      <p class="err" id="lobbyErr" role="alert"></p>
+    </div>
+    <p class="note">Creezi o masă, trimiți link-ul prietenilor și fiecare intră cu numele lui. Poți adăuga și boți ca să umpli locurile.</p>
+  </section>
+
+  <div class="layout" id="game" hidden>
+    <section class="play" aria-label="Masa de joc">
+      <div class="table" id="table">
+        <div class="center"><div class="pot" id="pot"></div><div class="board" id="board"></div></div>
+        <div class="tablemsg" id="tableMsg" hidden></div>
+      </div>
+      <div class="controls">
+        <div class="timer" id="timer" hidden><i id="timerBar"></i></div>
+        <div class="info" id="info" aria-live="polite"></div>
+        <div id="actionArea" hidden>
+          <div class="coach" id="coach" hidden>
+            <div class="coach-head">
+              <span class="coach-label" id="coachLabel">Antrenorul spune</span>
+              <span class="coach-act" id="coachAct">…</span>
+              <button class="coach-apply" id="coachApply" type="button">Aplică <kbd>A</kbd></button>
+            </div>
+            <ul id="coachWhy"></ul>
+          </div>
+          <div class="actions">
+            <button class="btn fold" id="btnFold" type="button">Fold <kbd>F</kbd></button>
+            <button class="btn call" id="btnCall" type="button">Check <kbd>C</kbd></button>
+            <button class="btn raise" id="btnRaise" type="button">Raise <kbd>R</kbd></button>
+          </div>
+          <div class="sizing">
+            <div class="presets" id="presets">
+              <button type="button" data-p="min">Min</button><button type="button" data-p="0.5">½ pot</button>
+              <button type="button" data-p="0.75">¾ pot</button><button type="button" data-p="1">Pot</button><button type="button" data-p="all">All-in</button>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="raiseRange" aria-label="Mărimea pariului">
+              <input type="number" id="raiseAmt" inputmode="numeric" aria-label="Pariază până la">
+            </div>
+          </div>
+        </div>
+        <div id="resultArea" hidden>
+          <p class="res-title" id="resTitle"></p>
+          <p class="res-detail" id="resDetail"></p>
+        </div>
+        <div class="wait" id="waitArea"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>Masa</h2>
+        <div id="hostBox" hidden>
+          <div class="row">
+            <button class="btn raise small" id="startBtn" type="button">Începe jocul</button>
+            <button class="btn ghost small" id="addBotBtn" type="button">Adaugă un bot</button>
+          </div>
+          <label class="field">Tip de joc <select id="sMode"><option value="cash">Cash game</option><option value="turneu">Turneu</option></select></label>
+          <label class="field">Blinduri <select id="sBlinds"><option value="0">5 / 10</option><option value="1">10 / 20</option><option value="2">25 / 50</option><option value="3">50 / 100</option></select></label>
+          <label class="field">Jetoane la intrare <select id="sStack"><option>500</option><option>1000</option><option>2000</option><option>5000</option></select></label>
+          <label class="field">Timp de gândire <select id="sTurn"><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+          <label class="field">Stilul boților <select id="sBots"><option value="mix">Mix</option><option value="prudent">Prudent</option><option value="echilibrat">Echilibrat</option><option value="agresiv">Agresiv</option></select></label>
+          <label class="toggle"><input type="checkbox" id="sCoach"> <span>Antrenorul e permis la masă</span></label>
+          <label class="toggle"><input type="checkbox" id="sRebuy"> <span>Se poate reîncărca cine rămâne fără jetoane</span></label>
+          <p class="note">Ești gazda. Scoți pe cineva de la masă cu × de lângă numele lui.</p>
+        </div>
+        <p class="note" id="tableInfo"></p>
+        <div class="row" style="margin:10px 0 0">
+          <label class="toggle"><input type="checkbox" id="optSit"> <span>Iau o pauză (nu primesc cărți)</span></label>
+        </div>
+        <button class="btn call small" id="rebuyBtn" type="button" hidden>Reîncarcă jetoanele</button>
+      </section>
+      <section class="panel">
+        <h2>Antrenorul</h2>
+        <label class="toggle" id="coachToggle"><input type="checkbox" id="optCoach"> <span>Pornește antrenorul meu (ceilalți văd că e pornit)</span></label>
+        <div class="seg" id="coachSeg" role="radiogroup" aria-label="Stilul antrenorului" style="margin-top:8px">
+          <button type="button" role="radio" data-c="sigur" id="cs-sigur">Sigur</button>
+          <button type="button" role="radio" data-c="echilibrat" id="cs-echilibrat">Echilibrat</button>
+          <button type="button" role="radio" data-c="agresiv" id="cs-agresiv">Agresiv</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="optHud"> <span>HUD pe fiecare jucător: VPIP/PFR și agresivitate</span></label>
+        <p class="note" id="coachNote"></p>
+        <div class="row" style="margin:10px 0 0"><button class="btn ghost small" id="jvBtn" type="button">Conectează Jarvis</button></div>
+        <p class="note" id="jvInfo">Jarvis e aplicația separată de antrenor (Jarvis.exe). Ceilalți văd eticheta „JARVIS” lângă numele tău.</p>
+      </section>
+      <section class="panel" id="tourPanel" hidden><h2>Turneul</h2><dl class="stats" id="tourStats"></dl><p class="note" id="tourNote"></p></section>
+      <section class="panel">
+        <h2>Ce a învățat antrenorul tău</h2>
+        <table class="board-tbl" id="learnTbl"></table>
+        <p class="note">Învață din mutările făcute cu „Aplică”: o mutare reușește când mâna se câștigă fără showdown. Ce merge face mai des, ce nu merge mai rar, separat pentru fiecare jucător. Se păstrează în browserul tău.</p>
+        <button class="btn ghost small" id="learnReset" type="button" style="margin-top:8px">Șterge ce a învățat</button>
+      </section>
+      <section class="panel"><h2>Clasament</h2><table class="board-tbl" id="leader"></table></section>
+      <section class="panel">
+        <h2>Chat</h2>
+        <ol class="chatlog" id="chatlog"></ol>
+        <form class="chatform" id="chatForm"><input id="chatIn" maxlength="200" placeholder="Scrie ceva mesei…" autocomplete="off"><button class="btn ghost small" type="submit">Trimite</button></form>
+      </section>
+      <section class="panel"><h2>Jurnalul mâinilor</h2><ol class="log" id="log"></ol></section>
+    </aside>
+  </div>
+</div>
+
+<script>
+/*SHARED*/
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const fmt = n => Math.round(n).toLocaleString('ro-RO');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+// pagina stă pe „poker-web”, dar jocul rulează pe „poker-server”
+const WS_HOST = location.host.startsWith('poker-web') ? 'poker-server-production-cb58.up.railway.app' : location.host;
+const suitTint = s => esc(s).replace(/(10|[2-9JQKA])([♠♥♦♣])/g, (m, r, su) => `<span class="${SUITCLS[SUITSYM.indexOf(su)]}">${r}${su}</span>`);
+
+/* ---------- preferințe și sesiune ---------- */
+let PREF = { name:'', coachStyle:'echilibrat', hud:true, sessions:{} };
+try { Object.assign(PREF, JSON.parse(localStorage.getItem('poker-online') || '{}')); } catch (e) {}
+const savePref = () => { try { localStorage.setItem('poker-online', JSON.stringify(PREF)); } catch (e) {} };
+const urlCode = (new URLSearchParams(location.search).get('t') || '').toUpperCase().slice(0, 4);
+let ME = { code: urlCode || null, token: urlCode ? (PREF.sessions[urlCode] || null) : null };
+
+/* ---------- conexiunea ---------- */
+let ws = null, queue = [], S = null, offset = 0, everJoined = false;
+function sendM(o){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); else queue.push(o); }
+function connect(){
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + WS_HOST + '/ws');
+  ws.onopen = () => {
+    $('#conn').hidden = true;
+    if (ME.code && ME.token) ws.send(JSON.stringify({ t:'join', code:ME.code, token:ME.token, name:PREF.name }));
+    queue.splice(0).forEach(o => ws.send(JSON.stringify(o)));
+  };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } onMsg(m); };
+  ws.onclose = () => { $('#conn').hidden = !everJoined; setTimeout(connect, 1500); };
+}
+setInterval(() => { if (ws && ws.readyState === 1) ws.send('{"t":"ping"}'); }, 25000);
+function onMsg(m){
+  if (m.t === 'joined'){
+    ME.code = m.code; ME.token = m.token; everJoined = true;
+    PREF.sessions[m.code] = m.token; savePref();
+    history.replaceState(null, '', '?t=' + m.code);
+    $('#lobby').hidden = true; $('#game').hidden = false; $('#topActions').hidden = false;
+    $('#codeChip').textContent = m.code;
+  } else if (m.t === 'error'){
+    if (m.code === 'nf' && ME.code){ delete PREF.sessions[ME.code]; savePref(); ME.token = null; }
+    showLobby(m.msg);
+  } else if (m.t === 'kicked'){
+    if (ME.code){ delete PREF.sessions[ME.code]; savePref(); }
+    ME = { code:null, token:null }; S = null; showLobby('Gazda te-a scos de la masă.');
+  } else if (m.t === 'state'){
+    S = m; offset = m.now - Date.now(); checkLearn(); render(); maybeCoach();
+  } else if (m.t === 'jarvisCode'){
+    $('#jvInfo').innerHTML = `În Jarvis scrie codul mesei <b>${esc(m.code)}</b> și codul Jarvis <b>${esc(m.pin)}</b>. Codul expiră în 5 minute.`;
+  } else if (m.t === 'note'){
+    const w = $('#tableMsg'); w.hidden = false; w.textContent = m.msg;
+  }
+}
+function showLobby(msg){
+  everJoined = false;
+  $('#lobby').hidden = false; $('#game').hidden = true; $('#topActions').hidden = true;
+  $('#lobbyErr').textContent = msg || '';
+  history.replaceState(null, '', location.pathname + (ME.code ? '?t=' + ME.code : ''));
+}
+
+/* ---------- lobby ---------- */
+$('#nameIn').value = PREF.name || '';
+$('#codeIn').value = urlCode;
+function needName(){
+  const n = $('#nameIn').value.trim();
+  if (!n){ $('#lobbyErr').textContent = 'Scrie un nume ca să te recunoască prietenii la masă.'; $('#nameIn').focus(); return null; }
+  PREF.name = n.slice(0, 16); savePref(); return PREF.name;
+}
+$('#createBtn').addEventListener('click', () => { const n = needName(); if (!n) return; ME = { code:null, token:null }; sendM({ t:'create', name:n }); });
+$('#joinBtn').addEventListener('click', () => {
+  const n = needName(); if (!n) return;
+  const c = $('#codeIn').value.trim().toUpperCase();
+  if (c.length !== 4){ $('#lobbyErr').textContent = 'Codul mesei are 4 litere.'; return; }
+  ME = { code:c, token: PREF.sessions[c] || null };
+  sendM({ t:'join', code:c, name:n, token:ME.token });
+});
+$('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#joinBtn').click(); });
+$('#nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') (urlCode ? $('#joinBtn') : $('#createBtn')).click(); });
+
+/* ---------- antrenorul (rulează doar în browserul tău, cu ce vezi și tu) ---------- */
+const COACH = {
+  sigur:      { label:'Sigur',      open:1.0,  threeMul:.30, callMul:.70, cbet:0,   bluffFtb:.55, value:.68, thin:.56, raise:.78, semiRaise:false, steal:0,   light3:0,   barrel:false, note:'Joacă doar mâini bune și rar bluffează.' },
+  echilibrat: { label:'Echilibrat', open:1.25, threeMul:.40, callMul:.80, cbet:.65, bluffFtb:.45, value:.64, thin:.54, raise:.74, semiRaise:true,  steal:.08, light3:.25, barrel:true,  note:'Deschide mai larg, face continuation bet, fură blindurile și bluffează când adversarul dă des fold.' },
+  agresiv:    { label:'Agresiv',    open:1.55, threeMul:.55, callMul:.85, cbet:.85, bluffFtb:.38, value:.60, thin:.52, raise:.70, semiRaise:true,  steal:.15, light3:.5,  barrel:true,  note:'Presiune maximă: multe raise-uri, 3-bet-uri light și bluff-uri pe mai multe străzi.' }
+};
+const OPEN = { UTG:.15, HJ:.19, CO:.27, BTN:.45, SB:.38, 'BTN/SB':.75, BB:1 };
+// ce învață antrenorul (în browserul tău)
+const MOVES = { steal:'Furt de blinduri', light3:'3-bet light', cbet:'Continuation bet', barrel:'Al doilea pariu', semi:'Semi-bluff', bluff:'Bluff', push:'All-in (push)' };
+let LEARN = { g:{}, o:{} };
+try { Object.assign(LEARN, JSON.parse(localStorage.getItem('poker-online-learn') || '{}')); } catch (e) {}
+const saveLearn = () => { try { localStorage.setItem('poker-online-learn', JSON.stringify(LEARN)); } catch (e) {} };
+function learnStat(tag, opp){
+  const g = LEARN.g[tag] || { t:0, w:0 }, o = (opp && LEARN.o[opp] && LEARN.o[opp][tag]) || { t:0, w:0 };
+  const t = o.t + g.t * .3, w = o.w + g.w * .3;
+  return { rate:(w + 1) / (t + 2), tries:o.t + g.t, oT:o.t, oW:o.w, gT:g.t, gW:g.w };
+}
+function learnFactor(tag, opp, be){ const s = learnStat(tag, opp); return s.tries < 3 ? 1 : Math.max(.35, Math.min(1.7, s.rate / be)); }
+function learnNote(tag, opp){
+  const s = learnStat(tag, opp);
+  if (s.oT >= 2) return `Din experiență: ${MOVES[tag].toLowerCase()} contra lui ${opp} a reușit de ${s.oW} ori din ${s.oT}.`;
+  if (s.gT >= 3) return `Din experiență: ${MOVES[tag].toLowerCase()} a reușit de ${s.gW} ori din ${s.gT} până acum.`;
+  return '';
+}
+function learnRecord(tag, opp, ok){
+  const g = LEARN.g[tag] = LEARN.g[tag] || { t:0, w:0 }; g.t++; if (ok) g.w++;
+  if (opp){ LEARN.o[opp] = LEARN.o[opp] || {}; const o = LEARN.o[opp][tag] = LEARN.o[opp][tag] || { t:0, w:0 }; o.t++; if (ok) o.w++; }
+  saveLearn();
+}
+let pending = { hand:-1, list:[] };
+function checkLearn(){
+  if (!S || !S.h || !S.h.over || !S.h.result || pending.hand !== S.handNum || !pending.list.length) return;
+  const ok = !!S.h.result.byFold && (S.h.result.won || [])[S.you] > 0;
+  pending.list.forEach(m => learnRecord(m.tag, m.opp, ok));
+  pending = { hand:-1, list:[] };
+}
+const alive = j => { const p = S.seats[j]; return !!p && p.inHand && !p.folded; };
+const potTotal = () => S.seats.reduce((s, p) => s + (p ? p.com : 0), 0);
+function rates(p){ const s = p.st; return { vpip:(s.vpip + 3.5) / (s.hands + 10), pfr:(s.pfr + 1.8) / (s.hands + 10), af:(s.agg + 6) / (s.calls + 4), ftb:(s.foldFaced + 2.7) / (s.faced + 6) }; }
+function rangeOf(j){
+  const p = S.seats[j], hx = p.hx, r = rates(p); let t = 1;
+  if (hx.pfAct === 'raise') t = Math.max(.04, r.pfr * (hx.pfRaises > 1 ? .4 : 1));
+  else if (hx.pfAct === 'call') t = Math.max(.08, Math.min(r.vpip, .5));
+  else if (hx.pfAct === 'limp') t = Math.min(1, r.vpip * 1.2);
+  return { t, agg: hx.postAgg > 0, called: hx.postCall > 0, bluff: Math.min(.45, Math.max(.08, .1 + .08 * (r.af - 1))) };
+}
+function rangeEquity(hole, opps, iters){
+  const board = S.h.board, used = new Set([...hole, ...board]), rest = [];
+  for (let c = 0; c < 52; c++) if (!used.has(c)) rest.push(c);
+  const n = rest.length, need = 5 - board.length, ranges = opps.map(rangeOf);
+  const boardCat = board.length >= 3 ? Math.floor(evalHand(board) / 1048576) : -1;
+  const swap = (a, b) => { const t = rest[a]; rest[a] = rest[b]; rest[b] = t; };
+  const ok = (h, R) => {
+    if (PCT[h[0] * 52 + h[1]] > R.t) return false;
+    if (board.length < 3 || (!R.agg && !R.called)) return true;
+    if (Math.floor(evalHand(h.concat(board)) / 1048576) > boardCat) return true;
+    const d = hasDraw(h, board);
+    return R.agg ? (d && Math.random() < .6) || Math.random() < R.bluff : d || Math.random() < .3;
+  };
+  let score = 0;
+  for (let it = 0; it < iters; it++){
+    let pos = 0; const hands = [];
+    for (const R of ranges){
+      let tries = 0, h;
+      do { swap(pos, pos + Math.floor(Math.random() * (n - pos))); swap(pos + 1, pos + 1 + Math.floor(Math.random() * (n - pos - 1))); h = [rest[pos], rest[pos + 1]]; tries++; }
+      while (tries < 25 && !ok(h, R));
+      hands.push(h); pos += 2;
+    }
+    for (let k = 0; k < need; k++){ swap(pos, pos + Math.floor(Math.random() * (n - pos))); pos++; }
+    const full = board.concat(rest.slice(pos - need, pos)), me = evalHand(hole.concat(full));
+    let ties = 0, lost = false;
+    for (const h of hands){ const s = evalHand(h.concat(full)); if (s > me){ lost = true; break; } if (s === me) ties++; }
+    if (!lost) score += 1 / (ties + 1);
+  }
+  return score / iters;
+}
+function coachAdvice(){
+  const you = S.you, me = S.seats[you], L = S.legal, h = S.h, pre = h.street === 0, pos = h.pos[you], BB = h.bb;
+  const cfg = COACH[PREF.coachStyle] || COACH.echilibrat;
+  const opps = S.seats.map((_, j) => j).filter(j => j !== you && alive(j)), k = opps.length;
+  const eqR = rangeEquity(me.hole, opps, k > 2 ? 500 : 800);
+  const pt = potTotal(), need = L.toCall > 0 ? L.callAmt / (pt + L.callAmt) : 0;
+  const pc = v => Math.round(v * 100) + '%';
+  const to = v => Math.max(L.minTo, Math.min(L.maxTo, Math.round(v / 5) * 5));
+  const nm = j => S.seats[j].name;
+  const suited = (me.hole[0] & 3) === (me.hole[1] & 3);
+  const avg = (arr, f) => arr.length ? arr.reduce((s, j) => s + f(rates(S.seats[j])), 0) / arr.length : 0;
+  const agg = h.lastAgg >= 0 && h.lastAgg !== you ? h.lastAgg : -1;
+  const why = []; let rec;
+  const opp1 = k === 1 ? nm(opps[0]) : (agg >= 0 ? nm(agg) : null);
+  const effBB = Math.min(me.stack + me.bet, Math.max(0, ...opps.map(j => S.seats[j].stack + S.seats[j].bet))) / BB;
+  let icmPen = 0, icmWhy = '';
+  if (S.tour && !S.tour.over){
+    const live = S.seats.filter(p => p && !p.out), paidN = payouts(S.tour.startN).length;
+    if (live.length === paidN + 1){
+      const big = live.every(p => p === me || p.stack <= me.stack);
+      icmPen = big ? .03 : .08;
+      icmWhy = `Bubble: mai e un singur jucător de eliminat până la premii. Un call all-in îți cere cu ${pc(icmPen)} mai mult equity${big ? ', dar ca lider poți presa stivele mici' : ''}.`;
+    } else if (live.length <= paidN && live.length > 1){ icmPen = .03; icmWhy = 'Ești pe bani: fiecare loc urcat valorează, deci ai grijă la call-urile all-in.'; }
+  }
+  const needI = need + (L.callAmt >= me.stack * .4 ? icmPen : 0);
+  if (S.tour || effBB <= 25) why.push(`Stiva ta efectivă: ${effBB.toFixed(1)} BB.`);
+  if (pre){
+    const myPct = pctOf(me.hole);
+    why.push(`${startLabel(me.hole)} e în top ${Math.max(1, Math.round(myPct * 100))}% din mâinile de start.`);
+    if (effBB <= 12){
+      const behind = S.seats.filter((q, j) => q && j !== you && alive(j) && !q.allin && !q.hx.vpip && q.last !== 'Check').length;
+      const pp = Math.min(1, pushPct(effBB, behind) * cfg.open / 1.25 * learnFactor('push', null, .45));
+      if (h.currentBet <= BB){
+        if (myPct <= pp && L.canRaise) rec = { type:'raise', to:L.maxTo, tag:'push', opp:null };
+        else rec = L.toCall === 0 ? { type:'check' } : { type:'fold' };
+        why.push(`Cu ${effBB.toFixed(1)} BB aici e all-in sau fold. De pe ${pos || 'poziția ta'} dai all-in cam cu top ${pc(pp)} din mâini, iar mâna ta ${rec.type === 'raise' ? 'intră' : 'nu intră'}.`);
+      } else if (eqR >= needI){
+        rec = (L.canRaise && myPct <= pp * .4) ? { type:'raise', to:L.maxTo } : { type:'call' };
+        why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e peste cât îți trebuie (${pc(needI)}): merită să intri cu toată stiva.`);
+      } else { rec = { type:'fold' }; why.push(`Contra raise-ului, equity-ul tău (${pc(eqR)}) e sub cât îți trebuie (${pc(needI)}).`); }
+      if (icmWhy) why.push(icmWhy);
+      if (rec.tag){ const ln = learnNote('push', null); if (ln) why.push(ln); }
+      why.push(`Equity estimat contra range-urilor lor: ${pc(eqR)}${need ? ` · îți trebuie ${pc(need)}` : ''}.`);
+      return { rec, why };
+    }
+    const limpers = opps.filter(j => S.seats[j].hx.pfAct === 'limp').length;
+    if (L.toCall === 0){
+      if (myPct <= .12 * cfg.open && L.canRaise){ rec = { type:'raise', to: to(BB * 3 + BB * limpers) }; why.push('Mână bună: dă raise ca să-i pedepsești pe cei intrați doar cu call.'); }
+      else { rec = { type:'check' }; why.push('Din big blind vezi flop-ul gratis.'); }
+    } else if (h.currentBet <= BB){
+      const base = OPEN[pos] ?? .2;
+      let open = Math.min(1, base * cfg.open) - .03 * limpers;
+      const blinds = opps.filter(j => h.pos[j] === 'SB' || h.pos[j] === 'BB');
+      const steal = !limpers && ['CO','BTN','SB','BTN/SB'].includes(pos);
+      const bbIdx = opps.find(j => h.pos[j] === 'BB' || h.pos[j] === 'BTN/SB'), bbName = bbIdx !== undefined ? nm(bbIdx) : null;
+      if (steal && cfg.steal) open = Math.min(1, open + cfg.steal * learnFactor('steal', bbName, .4) + Math.max(0, avg(blinds, r => r.ftb) - .45));
+      if (myPct <= open && L.canRaise){
+        rec = { type:'raise', to: to(BB * (effBB <= 25 ? 2.2 : pos === 'BTN/SB' ? 2.5 : 3) + BB * limpers) };
+        if (steal && myPct > base){ rec.tag = 'steal'; rec.opp = bbName; }
+        if (effBB <= 25) why.push('Cu stiva sub 25 BB deschizi mai mic (2,2 BB), ca să poți renunța ieftin dacă primești all-in.');
+        why.push(steal && myPct > base ? `Furt de blinduri: din ${pos}, cu toți ceilalți ieșiți, un raise câștigă des potul pe loc.` : `Din ${pos} se deschide cu cam ${pc(Math.min(1, base * cfg.open))} din mâini, iar mâna ta intră.`);
+        if (limpers) why.push(`Adaugi câte 1 BB pentru fiecare jucător intrat cu call (${limpers}).`);
+      } else if (pos === 'SB' && limpers > 0 && myPct <= .5){ rec = { type:'call' }; why.push('Din SB completezi ieftin într-un pot cu mai mulți jucători.'); }
+      else { rec = { type:'fold' }; why.push(`Din ${pos} mâna e prea slabă de deschis.`); }
+    } else {
+      const rr = agg >= 0 ? rangeOf(agg).t : .2;
+      if (agg >= 0) why.push(`${nm(agg)} a dat raise. Dă raise preflop în ${pc(rates(S.seats[agg]).pfr)} din mâini, deci range-ul lui e cam top ${pc(rr)}.`);
+      if (h.raises >= 2){
+        if (myPct <= (cfg.light3 >= .5 ? .045 : .03) && L.canRaise){ rec = { type:'raise', to: to(h.currentBet * 2.4) }; why.push('Contra unui re-raise continui agresiv doar cu mâinile de top.'); }
+        else if (myPct <= .08 * cfg.callMul / .7 && eqR >= need * .9){ rec = { type:'call' }; why.push('Mână destul de bună ca să plătești re-raise-ul.'); }
+        else { rec = { type:'fold' }; why.push('Contra unui re-raise, mâna ta e sub range-ul lui.'); }
+      } else {
+        const threeT = Math.max(.025, rr * cfg.threeMul), callT = Math.min(.55, rr * (pos === 'BB' ? 1.05 : cfg.callMul));
+        const late = ['CO','BTN','SB','BB','BTN/SB'].includes(pos);
+        const light = cfg.light3 && late && agg >= 0 && rates(S.seats[agg]).pfr >= .2 && suited && myPct > threeT && myPct <= .4;
+        if (effBB <= 25 && L.canRaise && myPct <= Math.max(.05, rr * cfg.threeMul * 1.5)){ rec = { type:'raise', to:L.maxTo }; why.push(`Re-steal: cu ${effBB.toFixed(1)} BB, un all-in peste raise-ul lui e mai bun decât un 3-bet mic.`); }
+        else if (myPct <= threeT && L.canRaise){ rec = { type:'raise', to: to(h.currentBet * 3) }; why.push('Mâna ta e mult peste range-ul lui: 3-bet pentru valoare.'); }
+        else if (light && L.canRaise && Math.random() < Math.min(.95, cfg.light3 * learnFactor('light3', nm(agg), .45))){ rec = { type:'raise', to: to(h.currentBet * 3), tag:'light3', opp:nm(agg) }; why.push(`3-bet light: ${nm(agg)} deschide des și renunță des la re-raise.`); }
+        else if (myPct <= callT && eqR >= need * .9){ rec = { type:'call' }; why.push(pos === 'BB' ? 'Din BB ai deja bani în pot, deci aperi mai larg.' : 'Destul de bună să joci contra lui, dar nu să-l crești.'); }
+        else { rec = { type:'fold' }; why.push('Mâna e sub range-ul cu care merită să continui contra acestui raise.'); }
+      }
+    }
+  } else {
+    const fair = 1 / (k + 1), eqH = k <= 1 ? eqR : .5 + (eqR - fair) * .5 / (1 - fair);
+    const draw = hasDraw(me.hole, h.board), ftbAll = avg(opps, r => r.ftb);
+    const iWasPfAgg = h.pfAgg === you, iBetLast = me.aggStreet === h.street - 1;
+    why.push(`Ai ${handName(evalHand(me.hole.concat(h.board))).toLowerCase()}${draw ? ', plus un draw' : ''}.`);
+    if (agg >= 0){ const r = rates(S.seats[agg]); why.push(`${nm(agg)} are AF ${r.af.toFixed(1)}: ${r.af > 2.2 ? 'pariază des, deci bluffează și el des' : 'pariază mai ales cu mâini bune'}.`); }
+    if (L.toCall === 0){
+      if (eqH >= cfg.value && L.canRaise){ rec = { type:'raise', to: to(pt * .66) }; why.push('Ești probabil în față: pariază pentru valoare.'); }
+      else if (eqH >= cfg.thin && k <= 2 && L.canRaise){ rec = { type:'raise', to: to(pt * .5) }; why.push('Pariu mic pentru valoare și ca să nu le dai cărți gratis.'); }
+      else if (L.canRaise && cfg.cbet && iWasPfAgg && h.street === 1 && k <= 2 && Math.random() < Math.min(.97, cfg.cbet * learnFactor('cbet', opp1, .3))){ rec = { type:'raise', to: to(pt * .4), tag:'cbet', opp:opp1 }; why.push('Continuation bet: tu ai dat raise preflop, iar pe flop adversarii ratează de cele mai multe ori.'); }
+      else if (L.canRaise && cfg.barrel && iBetLast && k === 1 && (draw || (ftbAll + learnStat('barrel', opp1).rate) / 2 >= cfg.bluffFtb)){ rec = { type:'raise', to: to(pt * .6), tag:'barrel', opp:opp1 }; why.push(draw ? 'Al doilea pariu cu draw: poate da fold, iar dacă plătește mai ai cărți bune.' : `Continui presiunea: dă fold la pariuri în ${pc(ftbAll)} din cazuri.`); }
+      else if (L.canRaise && k <= 2 && draw && h.street < 3 && cfg.semiRaise){ rec = { type:'raise', to: to(pt * .5), tag:'semi', opp:opp1 }; why.push('Semi-bluff: poate da fold acum, iar dacă plătește poți prinde draw-ul.'); }
+      else if (L.canRaise && k === 1 && (ftbAll + learnStat('bluff', opp1).rate) / 2 >= cfg.bluffFtb){ rec = { type:'raise', to: to(pt * .5), tag:'bluff', opp:opp1 }; why.push(`Adversarul dă fold la pariuri în ${pc(ftbAll)} din cazuri: un bluff de ½ pot e profitabil.`); }
+      else { rec = { type:'check' }; why.push('Mâna nu e destul de puternică de pariat. Vezi cartea următoare gratis.'); }
+    } else {
+      if (eqH >= cfg.raise && L.canRaise){ rec = { type:'raise', to: to(h.currentBet + (pt + L.toCall) * .75) }; why.push('Mână foarte puternică: raise pentru valoare.'); }
+      else if (cfg.semiRaise && draw && h.street < 3 && k === 1 && L.canRaise && eqR >= need * .7){ rec = { type:'raise', to: to(h.currentBet * 2.8), tag:'semi', opp:opp1 }; why.push('Semi-bluff raise: câștigi pe loc dacă dă fold, iar dacă plătește ai încă draw-ul.'); }
+      else if (eqR >= needI){ rec = { type:'call' }; why.push(`Equity ${pc(eqR)} față de ${pc(needI)} cât îți trebuie: call profitabil.`); }
+      else if (draw && h.street < 3 && eqR >= need * .75 && L.callAmt <= me.stack * .15){ rec = { type:'call' }; why.push('Cote implicite: dacă îți intră draw-ul, câștigi mai mult pe străzile următoare.'); }
+      else { rec = { type:'fold' }; why.push(`Equity ${pc(eqR)} e sub ${pc(need)}: plătind aici pierzi bani pe termen lung.`); }
+    }
+  }
+  if (rec.tag){ const ln = learnNote(rec.tag, rec.opp); if (ln) why.push(ln); }
+  if (icmWhy) why.push(icmWhy);
+  why.push(`Equity estimat contra range-urilor lor: ${pc(eqR)}${need ? ` · îți trebuie ${pc(need)}` : ''}.`);
+  return { rec, why };
+}
+let advice = null, adviceKey = '';
+function coachActive(){ return S && S.settings.coachAllowed && S.you >= 0 && S.seats[S.you] && S.seats[S.you].coach; }
+function maybeCoach(){
+  if (!coachActive() || !S.legal){ advice = null; adviceKey = ''; renderCoach(); return; }
+  const key = [S.handNum, S.h.street, S.h.currentBet, S.h.toAct, PREF.coachStyle].join('|');
+  if (key === adviceKey) return;
+  adviceKey = key; advice = null; renderCoach();
+  setTimeout(() => { if (adviceKey !== key || !S.legal) return; advice = coachAdvice(); renderCoach(); }, 30);
+}
+function adviceLabel(a){
+  const L = S.legal, r = a.rec;
+  if (r.type === 'fold') return 'Fold';
+  if (r.type === 'check') return 'Check';
+  if (r.type === 'call') return L.toCall ? `Call ${fmt(L.callAmt)}` : 'Check';
+  if (r.to >= L.maxTo) return `All-in ${fmt(L.maxTo)}`;
+  return `${S.h.currentBet === 0 ? 'Bet' : 'Raise la'} ${fmt(r.to)}`;
+}
+function renderCoach(){
+  const show = coachActive() && !!S.legal;
+  $('#coach').hidden = !show;
+  if (!show) return;
+  const cs = COACH[PREF.coachStyle] || COACH.echilibrat;
+  $('#coachLabel').textContent = `Antrenorul (${cs.label.toLowerCase()}) spune`;
+  $('#coachAct').textContent = advice ? adviceLabel(advice) : 'Se gândește…';
+  $('#coachWhy').innerHTML = advice ? advice.why.map(w => `<li>${esc(w)}</li>`).join('') : '';
+  $('#coachApply').disabled = !advice;
+}
+function applyAdvice(){
+  if (!advice || !S.legal) return;
+  const r = advice.rec;
+  if (r.tag){ if (pending.hand !== S.handNum) pending = { hand:S.handNum, list:[] }; pending.list.push({ tag:r.tag, opp:r.opp || null }); }
+  doAct(r.type, r.to);
+}
+
+/* ---------- acțiuni ---------- */
+function doAct(type, to){
+  if (!S || !S.legal) return;
+  if (type === 'fold' && S.legal.canCheck) type = 'check';
+  if (type === 'raise') to = to ?? Number($('#raiseAmt').value);
+  sendM({ t:'act', type, to });
+  S.legal = null; renderControls();
+}
+function setRaise(v){
+  const L = S.legal; if (!L) return;
+  v = Math.max(L.minTo, Math.min(L.maxTo, Math.round(v)));
+  $('#raiseRange').value = v; $('#raiseAmt').value = v; raiseLabel();
+}
+function presetValue(p){
+  const L = S.legal;
+  if (p === 'min') return L.minTo;
+  if (p === 'all') return L.maxTo;
+  return Math.round((S.h.currentBet + parseFloat(p) * (potTotal() + L.toCall)) / 5) * 5;
+}
+function raiseLabel(){
+  const L = S.legal; if (!L) return;
+  const v = Math.min(Number($('#raiseAmt').value) || L.minTo, L.maxTo);
+  $('#btnRaise').innerHTML = `${v >= L.maxTo ? 'All-in' : (S.h.currentBet === 0 ? 'Bet' : 'Raise la')} ${fmt(v)} <kbd>R</kbd>`;
+}
+let preppedKey = '';
+
+/* ---------- desenarea mesei ---------- */
+const SEATS = [];
+for (let i = 0; i < 6; i++){
+  const seat = document.createElement('div'); seat.className = 'seat'; seat.hidden = true;
+  seat.innerHTML = `<div class="tag"></div><div class="cards"></div><div class="plate"><button class="kick" type="button" title="Scoate de la masă" hidden>×</button><div class="pl-top"><span class="dealer" hidden>D</span><span class="nm"></span><span class="pos"></span></div><div class="stack"></div><div class="sty"></div><div class="flags"></div><div class="hud"></div></div>`;
+  const bet = document.createElement('div'); bet.className = 'betchip';
+  $('#table').appendChild(seat); $('#table').appendChild(bet);
+  const q = s => seat.querySelector(s);
+  SEATS.push({ seat, bet, tag:q('.tag'), cards:q('.cards'), dealer:q('.dealer'), nm:q('.nm'), pos:q('.pos'), stack:q('.stack'), sty:q('.sty'), flags:q('.flags'), hud:q('.hud'), kick:q('.kick') });
+  q('.kick').addEventListener('click', () => sendM({ t:'remove', seat:i }));
+}
+function layout(){
+  const w = $('#table').clientWidth, narrow = w < 560, rx = narrow ? 37 : 42, ry = 38;
+  const you = S && S.you >= 0 ? S.you : 0;
+  SEATS.forEach((s, i) => {
+    const slot = (i - you + 6) % 6;
+    let x, y, bx, by;
+    if (slot === 0){ x = 50; y = narrow ? 85 : 86; bx = narrow ? 24 : 34; by = narrow ? 82 : 80; }
+    else {
+      const a = (90 + slot * 60) * Math.PI / 180;
+      x = 50 + rx * Math.cos(a); y = 50 + ry * Math.sin(a);
+      bx = x + (50 - x) * .42; by = y + (48 - y) * .42;
+    }
+    s.seat.style.setProperty('--x', x + '%'); s.seat.style.setProperty('--y', y + '%');
+    s.bet.style.setProperty('--x', bx + '%'); s.bet.style.setProperty('--y', by + '%');
+    s.seat.classList.toggle('me', slot === 0 && S && S.you === i);
+  });
+}
+function cardHTML(c, mode){
+  if (mode === 'slot') return '<div class="card slot" aria-hidden="true"></div>';
+  if (c < 0) return '<div class="card back" role="img" aria-label="carte cu fața în jos"></div>';
+  const s = c & 3;
+  return `<div class="card s-${SUITCLS[s]}" role="img" aria-label="${RDISP[c >> 2]} de ${SUITNAME[s]}"><span class="r">${RDISP[c >> 2]}</span><span class="s">${SUITSYM[s]}</span></div>`;
+}
+function setHTML(node, html){ if (node.dataset.k !== html){ node.innerHTML = html; node.dataset.k = html; } }
+
+function render(){
+  if (!S) return;
+  layout();
+  const h = S.h, you = S.you, me = S.seats[you];
+  $('#codeChip').textContent = S.code;
+  S.seats.forEach((p, i) => {
+    const s = SEATS[i];
+    s.seat.hidden = !p; s.bet.hidden = !p;
+    if (!p) return;
+    s.nm.textContent = p.name + (i === you ? ' (tu)' : '');
+    s.pos.textContent = h && p.inHand ? (h.pos[i] || '') : '';
+    s.dealer.hidden = !(h && S.button === i);
+    s.stack.textContent = fmt(p.stack);
+    s.sty.textContent = p.bot ? `bot ${STYLES[p.style] ? STYLES[p.style].label.toLowerCase() : ''}` : '';
+    s.flags.innerHTML = (p.host ? '<span class="flag">gazdă</span>' : '') + (p.coach ? '<span class="flag coach">antrenor</span>' : '') + (p.jarvis ? '<span class="flag coach">jarvis</span>' : '') +
+      (!p.bot && !p.connected ? '<span class="flag off">deconectat</span>' : '') + (p.sitOut ? '<span class="flag off">pauză</span>' : '');
+    const st = p.st;
+    s.hud.hidden = !PREF.hud;
+    s.hud.textContent = st.hands ? `${Math.round(st.vpip / st.hands * 100)}/${Math.round(st.pfr / st.hands * 100)} · AF ${(st.agg / Math.max(1, st.calls)).toFixed(1)} · ${st.hands}` : 'fără date încă';
+    s.kick.hidden = !(S.host && i !== you);
+    const thinking = h && !h.over && !h.runout && h.toAct === i;
+    s.tag.textContent = thinking ? (i === you ? 'rândul tău' : 'se gândește…') : (S.tour && p.out ? (p.place === 1 ? 'câștigător' : p.place ? `eliminat · locul ${p.place}` : 'intră la turneul următor') : h && p.inHand ? p.last : (p.stack <= 0 ? 'fără jetoane' : ''));
+    s.tag.className = 'tag' + (/^Fold/.test(p.last) ? ' fold' : /^(Bet|Raise|All)/.test(p.last) ? ' aggr' : '');
+    s.seat.classList.toggle('out', !!h && (!p.inHand || p.folded));
+    s.seat.classList.toggle('active', !!thinking);
+    s.seat.classList.toggle('winner', !!(h && h.over && h.winners.includes(i)));
+    setHTML(s.bet, p.bet > 0 ? `<span class="chips">${fmt(p.bet)}</span>` : '');
+    setHTML(s.cards, (p.hole || []).map(c => cardHTML(c)).join(''));
+  });
+  $('#pot').innerHTML = `Pot <b>${h && !h.over ? fmt(potTotal()) : '—'}</b>`;
+  let b = ''; for (let i = 0; i < 5; i++) b += h && i < h.board.length ? cardHTML(h.board[i]) : cardHTML(0, 'slot');
+  setHTML($('#board'), b);
+  const msg = $('#tableMsg');
+  const players = S.seats.filter(Boolean).length;
+  if (!S.running && S.tour && S.tour.over){ msg.hidden = false; msg.textContent = S.host ? 'Turneul s-a terminat. Apasă „Pornește turneul” pentru unul nou.' : 'Turneul s-a terminat. Așteptăm ca gazda să pornească altul.'; }
+  else if (!S.running){ msg.hidden = false; msg.textContent = S.host ? (players < 2 ? 'Invită prieteni cu link-ul sau adaugă un bot, apoi apasă „Începe jocul”.' : 'Apasă „Începe jocul” când sunteți gata.') : 'Așteptăm ca gazda să înceapă jocul.'; }
+  else if (S.waiting){ msg.hidden = false; msg.textContent = 'Trebuie cel puțin doi jucători cu jetoane ca să înceapă mâna.'; }
+  else msg.hidden = true;
+  renderControls(); renderSide();
+}
+function renderControls(){
+  const h = S.h, you = S.you, me = S.seats[you], L = S.legal;
+  const chips = [];
+  if (h && me && me.inHand && me.hole.length && me.hole[0] >= 0){
+    chips.push(`<span class="chip-i">${h.board.length >= 3 ? 'Ai: <b>' + esc(handName(evalHand(me.hole.concat(h.board)))) + '</b>' : 'Mâna ta: <b>' + esc(startLabel(me.hole)) + '</b>'}</span>`);
+    if (!h.over) chips.push(`<span class="chip-i muted">${STREETS[h.street]} · poziția ta: ${h.pos[you] || '—'} · stiva: ${((me.stack + me.bet) / h.bb).toFixed(1)} BB</span>`);
+    if (L && L.toCall > 0){ const need = L.callAmt / (potTotal() + L.callAmt); chips.push(`<span class="chip-i muted">Pot odds: îți trebuie <b>${Math.round(need * 100)}%</b> ca să plătești ${fmt(L.callAmt)}</span>`); }
+  }
+  $('#info').innerHTML = chips.join('');
+  $('#actionArea').hidden = !L;
+  if (L){
+    const key = S.handNum + '|' + h.street + '|' + h.currentBet + '|' + h.toAct;
+    if (key !== preppedKey){
+      preppedKey = key;
+      const r = $('#raiseRange'), a = $('#raiseAmt');
+      r.min = a.min = L.minTo; r.max = a.max = L.maxTo; r.step = a.step = 5;
+      setRaise(h.street === 0 && h.currentBet <= h.bb ? h.bb * 3 : presetValue(h.currentBet === 0 ? '0.5' : 'min'));
+    }
+    $('#btnFold').disabled = L.canCheck;
+    $('#btnCall').innerHTML = L.canCheck ? 'Check <kbd>C</kbd>' : `${L.callAmt >= me.stack ? 'Call all-in' : 'Call'} ${fmt(L.callAmt)} <kbd>C</kbd>`;
+    $('#btnRaise').disabled = !L.canRaise;
+    $('#raiseRange').disabled = $('#raiseAmt').disabled = !L.canRaise || L.minTo >= L.maxTo;
+    document.querySelectorAll('#presets button').forEach(x => x.disabled = !L.canRaise);
+    raiseLabel();
+  }
+  const showRes = !!(h && h.over && h.result);
+  $('#resultArea').hidden = !showRes;
+  if (showRes){
+    const won = h.result.won || [];
+    $('#resTitle').textContent = h.result.title;
+    $('#resTitle').className = 'res-title' + (won[you] > 0 ? ' win' : (me && me.inHand ? ' lose' : ''));
+    $('#resDetail').textContent = h.result.detail;
+  }
+  renderWait(); renderCoach();
+}
+function renderWait(){
+  if (!S) return;
+  const h = S.h, you = S.you, me = S.seats[you], now = Date.now() + offset;
+  let t = '';
+  if (h && !h.over){
+    if (h.runout) t = 'All-in. Se dau restul cărților…';
+    else if (h.toAct >= 0 && h.toAct !== you && S.seats[h.toAct]) t = `${S.seats[h.toAct].name} se gândește…` + (me && me.inHand && me.folded ? ' Ai dat fold în mâna asta.' : '');
+  } else if (h && h.over && h.nextAt) t = `Mâna următoare în ${Math.max(0, Math.ceil((h.nextAt - now) / 1000))} s.`;
+  if (h && !h.over && me && !me.inHand) t += ' Intri în joc de la mâna următoare.';
+  $('#waitArea').textContent = t;
+  const timer = $('#timer');
+  if (h && !h.over && h.deadline && h.toAct >= 0){
+    const total = (S.seats[h.toAct] && S.seats[h.toAct].connected ? S.settings.turnTime : 6) * 1000;
+    const left = Math.max(0, h.deadline - now);
+    timer.hidden = false; $('#timerBar').style.width = Math.min(100, left / total * 100) + '%';
+    timer.classList.toggle('low', left < 8000);
+  } else timer.hidden = true;
+}
+setInterval(renderWait, 250);
+function renderSide(){
+  const you = S.you, me = S.seats[you], st = S.settings;
+  $('#hostBox').hidden = !S.host;
+  const tourOn = !!(S.tour && !S.tour.over);
+  if (S.host){
+    $('#startBtn').textContent = S.running ? 'Pune pauză' : st.mode === 'turneu' ? (tourOn ? 'Continuă turneul' : 'Pornește turneul') : 'Începe jocul';
+    $('#addBotBtn').disabled = S.seats.every(Boolean) || tourOn;
+    $('#sMode').value = st.mode; $('#sMode').disabled = S.running;
+    $('#sBlinds').disabled = st.mode === 'turneu'; $('#sStack').disabled = st.mode === 'turneu';
+    $('#sBlinds').value = String(st.blinds); $('#sStack').value = String(st.stack); $('#sTurn').value = String(st.turnTime); $('#sBots').value = st.botStyle;
+    $('#sCoach').checked = st.coachAllowed; $('#sRebuy').checked = st.rebuy;
+  }
+  $('#tableInfo').textContent = st.mode === 'turneu'
+    ? `Turneu: ${fmt(TSTART)} jetoane fiecare, blindurile cresc la fiecare ${HANDS_PER_LEVEL} mâini, fără reîncărcare · ${st.turnTime} s de gândire · antrenor ${st.coachAllowed ? 'permis' : 'interzis'}.`
+    : `Blinduri ${S.sb}/${S.bb} · ${fmt(st.stack)} jetoane la intrare · ${st.turnTime} s de gândire · antrenor ${st.coachAllowed ? 'permis' : 'interzis'} · ${st.rebuy ? 'cu' : 'fără'} reîncărcare.`;
+  if (me){
+    $('#optSit').checked = me.sitOut;
+    $('#rebuyBtn').hidden = !(me.stack <= 0 && st.rebuy && !S.tour);
+    $('#optCoach').checked = me.coach; $('#optCoach').disabled = !st.coachAllowed;
+    $('#coachToggle').classList.toggle('off', !st.coachAllowed);
+    $('#jvBtn').textContent = me.jarvis ? 'Deconectează Jarvis' : 'Conectează Jarvis';
+    $('#jvBtn').disabled = !st.coachAllowed;
+    if (me.jarvis && /expiră/.test($('#jvInfo').textContent)) $('#jvInfo').textContent = 'Jarvis e conectat la locul tău.';
+  }
+  document.querySelectorAll('#coachSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.c === PREF.coachStyle)));
+  $('#optHud').checked = PREF.hud;
+  $('#coachNote').textContent = st.coachAllowed ? (COACH[PREF.coachStyle] || COACH.echilibrat).note + ' Antrenorul vede doar cărțile tale și ce se întâmplă la masă.' : 'Gazda a oprit antrenorul la această masă.';
+  const cls = v => v > 0 ? 'pos-v' : v < 0 ? 'neg-v' : '';
+  const who = r => `${esc(r.p.name)}${r.i === you ? ' <small>(tu)</small>' : ''}${r.p.bot ? ' <small>bot</small>' : ''}`;
+  const live = p => p.stack + (S.h && !S.h.over ? p.com : 0);
+  if (S.tour){
+    const rows = S.seats.map((p, i) => p && { p, i, s: live(p) }).filter(Boolean)
+      .sort((a, b) => (a.p.out ? 1 : 0) - (b.p.out ? 1 : 0) || (a.p.out ? (a.p.place || 99) - (b.p.place || 99) : b.s - a.s));
+    $('#leader').innerHTML = '<thead><tr><th>Jucător</th><th class="n">Stivă</th><th class="n">BB</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td>${who(r)}</td><td class="n">${r.p.out ? (r.p.place === 1 ? 'câștigător' : r.p.place ? `locul ${r.p.place}` : '—') : fmt(r.s)}</td><td class="n">${r.p.out ? '—' : (r.s / S.bb).toFixed(1)}</td></tr>`).join('') + '</tbody>';
+  } else {
+    const rows = S.seats.map((p, i) => p && { p, i, net: live(p) - st.stack * p.buyins }).filter(Boolean).sort((a, b) => b.net - a.net);
+    $('#leader').innerHTML = '<thead><tr><th>Jucător</th><th class="n">Stivă</th><th class="n">Rezultat</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td>${who(r)}${r.p.buyins > 1 ? ` <small>· ${r.p.buyins}× buy-in</small>` : ''}</td><td class="n">${fmt(r.p.stack)}</td><td class="n ${cls(r.net)}">${r.net > 0 ? '+' : ''}${fmt(r.net)}</td></tr>`).join('') + '</tbody>';
+  }
+  // turneul
+  $('#tourPanel').hidden = !S.tour;
+  if (S.tour){
+    const T = S.tour, pay = payouts(T.startN), alivePs = S.seats.filter(p => p && !p.out);
+    const eqs = icm(S.seats.map(p => p && !p.out ? live(p) : 0), pay);
+    const mine = me && !me.out ? live(me) : 0;
+    const nxt = LEVELS[Math.min(T.level + 1, LEVELS.length - 1)];
+    $('#tourStats').innerHTML = `
+      <div><dt>Nivel</dt><dd>${T.level + 1}</dd></div>
+      <div><dt>Blinduri · ante</dt><dd>${S.sb}/${S.bb}${S.ante ? ' · ' + S.ante : ''}</dd></div>
+      <div><dt>Crește în</dt><dd>${Math.max(0, T.hpl - T.handsAtLevel)} mâini</dd></div>
+      <div><dt>Jucători rămași</dt><dd>${alivePs.length} din ${T.startN}</dd></div>
+      <div><dt>Stiva ta</dt><dd>${mine ? (mine / S.bb).toFixed(1) + ' BB' : '—'}</dd></div>
+      <div><dt>M (runde de blinduri)</dt><dd>${mine ? (mine / (S.sb + S.bb + S.ante * alivePs.length)).toFixed(1) : '—'}</dd></div>
+      <div><dt>Valoarea ta (ICM)</dt><dd>${mine ? eqs[you].toFixed(1) + '% din premii' : '—'}</dd></div>
+      <div><dt>Premii</dt><dd>${pay.map((v, k) => `${k + 1}: ${v}%`).join(' · ')}</dd></div>`;
+    $('#tourNote').textContent = T.over ? 'Turneul s-a terminat.'
+      : alivePs.length === pay.length + 1 ? 'Bubble: încă o eliminare și toți cei rămași iau premii. Stivele mici joacă strâns, liderul poate presa.'
+      : alivePs.length <= pay.length ? 'Toți cei rămași sunt pe bani. Acum se joacă pentru locurile de sus.'
+      : `Următorul nivel: ${nxt[0]}/${nxt[1]}${nxt[2] ? ` cu ante ${nxt[2]}` : ''}. Sub 12 BB, antrenorul trece pe all-in sau fold.`;
+  }
+  // ce a învățat antrenorul
+  $('#learnTbl').innerHTML = '<thead><tr><th>Mutare</th><th class="n">Încercări</th><th class="n">Reușite</th></tr></thead><tbody>' +
+    Object.keys(MOVES).map(tag => { const s = LEARN.g[tag] || { t:0, w:0 }; return `<tr><td>${MOVES[tag]}</td><td class="n">${s.t}</td><td class="n">${s.t ? Math.round(s.w / s.t * 100) + '%' : '—'}</td></tr>`; }).join('') + '</tbody>';
+  const cl = $('#chatlog'), atB = cl.scrollHeight - cl.scrollTop - cl.clientHeight < 30;
+  setHTML(cl, S.chat.map(c => `<li><b>${esc(c.name)}:</b> ${esc(c.text)}</li>`).join('') || '<li class="note">Niciun mesaj încă.</li>');
+  if (atB) cl.scrollTop = cl.scrollHeight;
+  const lg = $('#log');
+  setHTML(lg, S.log.map(l => `<li class="${esc(l.cls)}">${suitTint(l.text)}</li>`).join(''));
+  lg.scrollTop = lg.scrollHeight;
+}
+
+/* ---------- evenimente ---------- */
+$('#btnFold').addEventListener('click', () => doAct('fold'));
+$('#btnCall').addEventListener('click', () => doAct('call'));
+$('#btnRaise').addEventListener('click', () => doAct('raise'));
+$('#coachApply').addEventListener('click', applyAdvice);
+$('#raiseRange').addEventListener('input', () => { $('#raiseAmt').value = $('#raiseRange').value; raiseLabel(); });
+$('#raiseAmt').addEventListener('input', () => { $('#raiseRange').value = $('#raiseAmt').value; raiseLabel(); });
+$('#raiseAmt').addEventListener('change', () => setRaise(Number($('#raiseAmt').value)));
+$('#presets').addEventListener('click', e => { const b = e.target.closest('button'); if (b && !b.disabled && S.legal) setRaise(presetValue(b.dataset.p)); });
+$('#startBtn').addEventListener('click', () => sendM({ t: S.running ? 'pause' : 'start' }));
+$('#addBotBtn').addEventListener('click', () => sendM({ t:'addBot' }));
+const sendSettings = () => sendM({ t:'settings', s:{ blinds:Number($('#sBlinds').value), stack:Number($('#sStack').value), turnTime:Number($('#sTurn').value),
+  botStyle:$('#sBots').value, coachAllowed:$('#sCoach').checked, rebuy:$('#sRebuy').checked, mode:$('#sMode').value } });
+['#sMode','#sBlinds','#sStack','#sTurn','#sBots','#sCoach','#sRebuy'].forEach(id => $(id).addEventListener('change', sendSettings));
+$('#learnReset').addEventListener('click', () => { LEARN = { g:{}, o:{} }; saveLearn(); if (S) renderSide(); });
+$('#optSit').addEventListener('change', e => sendM({ t:'sitout', on:e.target.checked }));
+$('#jvBtn').addEventListener('click', () => {
+  const me = S && S.seats[S.you];
+  if (me && me.jarvis){ sendM({ t:'jarvisOff' }); $('#jvInfo').textContent = 'Jarvis a fost deconectat.'; }
+  else sendM({ t:'jarvisCode' });
+});
+$('#rebuyBtn').addEventListener('click', () => sendM({ t:'rebuy' }));
+$('#optCoach').addEventListener('change', e => sendM({ t:'coach', on:e.target.checked }));
+$('#coachSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; PREF.coachStyle = b.dataset.c; savePref(); adviceKey = ''; renderSide(); maybeCoach(); });
+$('#optHud').addEventListener('change', e => { PREF.hud = e.target.checked; savePref(); render(); });
+$('#chatForm').addEventListener('submit', e => { e.preventDefault(); const v = $('#chatIn').value.trim(); if (v){ sendM({ t:'chat', text:v }); $('#chatIn').value = ''; } });
+$('#copyLink').addEventListener('click', async () => {
+  const link = 'https://poker-server-production-cb58.up.railway.app/?t=' + (S ? S.code : ME.code);
+  try { await navigator.clipboard.writeText(link); $('#copyLink').textContent = 'Link copiat'; }
+  catch (e) { $('#copyLink').textContent = link; }
+  setTimeout(() => { $('#copyLink').textContent = 'Copiază link-ul de invitație'; }, 2500);
+});
+$('#leaveBtn').addEventListener('click', () => {
+  sendM({ t:'leave' });
+  if (ME.code){ delete PREF.sessions[ME.code]; savePref(); }
+  ME = { code:null, token:null }; S = null; history.replaceState(null, '', location.pathname); showLobby('');
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea') || e.ctrlKey || e.metaKey || e.altKey || !S || !S.legal) return;
+  const k = e.key.toLowerCase();
+  if (k === 'f') doAct('fold'); else if (k === 'c' || k === 'k') doAct('call'); else if (k === 'r') doAct('raise'); else if (k === 'a') applyAdvice();
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 80); });
+
+if (ME.code && ME.token){ $('#lobby').hidden = true; }
+connect();
+})();
+</script>
+</body>
+</html>
